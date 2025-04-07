@@ -1,19 +1,13 @@
 {
   "name": "AccessTracker",
-  "short_name": "AccessTracker",
+  "short_name": "Tracker",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "description": "AccessTracker – PWA remota per il tracciamento dei dispositivi. Made by pezzaliAPP",
+  "background_color": "#202124",
+  "theme_color": "#202124",
   "icons": [
     {
-      "src": "icon/accesstracker-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon/accesstracker-512.png",
+      "src": "icon/accesstracker-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
