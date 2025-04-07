@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AccessController</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Access Controller</h1>
+  <p>Controllo remoto stato AccessTracker</p>
+  <button onclick="setStatus(true)">ATTIVA Tracker</button>
+  <button onclick="setStatus(false)">DISATTIVA Tracker</button>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="controller.js"></script>
+</body>
+</html>
