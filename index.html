@@ -1,25 +1,38 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AccessTracker – Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AccessTracker</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon/accesstracker-icon-192.png" />
   <meta name="theme-color" content="#202124" />
   <style>
+    :root {
+      --bg-light: #f8f8f8;
+      --text-light: #000;
+      --bg-dark: #000;
+      --text-dark: #fff;
+      --button-bg-light: #333;
+      --button-bg-dark: #1f1f1f;
+    }
+    html[data-theme='light'] {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    html[data-theme='dark'] {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
     body {
       font-family: sans-serif;
-      background: #f8f8f8;
       text-align: center;
       padding: 40px;
-    }
-    h1 {
-      margin-bottom: 10px;
+      transition: all 0.3s ease;
     }
     .desc {
-      color: #555;
       margin-bottom: 30px;
+      opacity: 0.8;
     }
     .buttons {
       display: flex;
@@ -32,29 +45,67 @@
       display: block;
       padding: 14px 20px;
       font-size: 16px;
-      background: #333;
-      color: white;
       text-decoration: none;
       border-radius: 8px;
+      border: 1px solid #555;
       transition: background 0.3s;
     }
-    a.button:hover {
-      background: #555;
+    html[data-theme='light'] a.button {
+      background: var(--button-bg-light);
+      color: white;
+    }
+    html[data-theme='dark'] a.button {
+      background: var(--button-bg-dark);
+      color: white;
+    }
+    #themeToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      font-size: 20px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: inherit;
     }
   </style>
 </head>
 <body>
+  <button id="themeToggle" title="Cambia tema">🌓</button>
+
   <h1>📡 AccessTracker</h1>
-  <p class="desc">Controlla chi usa i tuoi dispositivi e visualizza i log</p>
+  <p class="desc">Traccia accessi. Controlla da remoto.</p>
 
   <div class="buttons">
-    <a href="tracker.html" class="button">📍 Modalità Tracker (Mac/PC)</a>
-    <a href="controller.html" class="button">📱 Modalità Controller (iPhone)</a>
-    <a href="accessi_dashboard_completo.html" class="button">📋 Log Accessi con filtri</a>
-    <a href="accessi_grafici_completo.html" class="button">📊 Statistiche e Grafici</a>
+    <a href="tracker.html" class="button">📍 Modalità Tracker</a>
+    <a href="controller.html" class="button">📱 Modalità Controller</a>
+    <a href="accessi_dashboard_completo.html" class="button">📋 Log Accessi</a>
+    <a href="accessi_grafici_completo.html" class="button">📊 Statistiche</a>
   </div>
 
   <script>
+    // imposta il tema automatico
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedTheme = localStorage.getItem('theme');
+    const htmlTag = document.documentElement;
+
+    function applyTheme(theme) {
+      htmlTag.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+    }
+
+    if (savedTheme) {
+      applyTheme(savedTheme);
+    } else {
+      applyTheme(systemPrefersDark ? 'dark' : 'light');
+    }
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const current = htmlTag.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // registra service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
         .then(reg => console.log("✅ Service Worker registrato"))
