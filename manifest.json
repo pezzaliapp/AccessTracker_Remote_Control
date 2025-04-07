@@ -7,6 +7,11 @@
   "theme_color": "#202124",
   "icons": [
     {
+      "src": "icon/accesstracker-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
       "src": "icon/accesstracker-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
