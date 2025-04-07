@@ -1,19 +1,150 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AccessController</title>
+  <title>AccessTracker – Controller</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icon/accesstracker-icon-192.png" />
+  <meta name="theme-color" content="#202124" />
+  <style>
+    :root {
+      --bg-light: #f8f8f8;
+      --text-light: #000;
+      --bg-dark: #000;
+      --text-dark: #fff;
+      --button-bg-light: #333;
+      --button-bg-dark: #1f1f1f;
+    }
+    html[data-theme='light'] {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    html[data-theme='dark'] {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+      transition: all 0.3s ease;
+    }
+    .desc {
+      margin-bottom: 20px;
+      opacity: 0.8;
+    }
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 300px;
+      margin: auto;
+      margin-top: 30px;
+    }
+    button, a.button {
+      padding: 14px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+    }
+    html[data-theme='light'] button, html[data-theme='light'] a.button {
+      background: var(--button-bg-light);
+      color: white;
+    }
+    html[data-theme='dark'] button, html[data-theme='dark'] a.button {
+      background: var(--button-bg-dark);
+      color: white;
+    }
+    #themeToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      font-size: 20px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: inherit;
+    }
+  </style>
 </head>
 <body>
-  <h1>Access Controller</h1>
-  <p>Controllo remoto stato AccessTracker</p>
-  <button onclick="setStatus(true)">ATTIVA Tracker</button>
-  <button onclick="setStatus(false)">DISATTIVA Tracker</button>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="controller.js"></script>
+  <button id="themeToggle" title="Cambia tema">🌓</button>
+
+  <h1>🎮 AccessTracker – Controller</h1>
+  <p class="desc">Attiva o disattiva il controllo da remoto</p>
+
+  <div>
+    <button id="toggleTracker">🔄 Caricamento...</button>
+  </div>
+
+  <div class="buttons">
+    <a class="button" href="accessi_dashboard_completo.html">📋 Visualizza Log Accessi</a>
+    <a class="button" href="accessi_grafici_completo.html">📊 Statistiche Accessi</a>
+    <a class="button" href="index.html">🏠 Torna alla Home</a>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCm91If2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      authDomain: "accesstracker-5d3f9.firebaseapp.com",
+      projectId: "accesstracker-5d3f9",
+      storageBucket: "accesstracker-5d3f9.appspot.com",
+      messagingSenderId: "331964316032",
+      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const docRef = doc(db, "controllo", "stato");
+    const toggleBtn = document.getElementById("toggleTracker");
+
+    async function aggiornaStato() {
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const attivo = docSnap.data().attivo;
+        toggleBtn.textContent = attivo ? "🛑 Disattiva Tracking" : "✅ Attiva Tracking";
+        toggleBtn.dataset.attivo = attivo;
+      } else {
+        toggleBtn.textContent = "⚠️ Documento non trovato";
+      }
+    }
+
+    toggleBtn.onclick = async () => {
+      const nuovoStato = toggleBtn.dataset.attivo === "true" ? false : true;
+      await setDoc(docRef, { attivo: nuovoStato });
+      aggiornaStato();
+    };
+
+    aggiornaStato();
+  </script>
+
+  <script>
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedTheme = localStorage.getItem('theme');
+    const htmlTag = document.documentElement;
+
+    function applyTheme(theme) {
+      htmlTag.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+    }
+
+    if (savedTheme) {
+      applyTheme(savedTheme);
+    } else {
+      applyTheme(systemPrefersDark ? 'dark' : 'light');
+    }
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const current = htmlTag.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  </script>
 </body>
 </html>
