@@ -1,27 +1,54 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AccessTracker - Seleziona modalità</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccessTracker – Dashboard</title>
   <style>
     body {
       font-family: sans-serif;
+      background: #f8f8f8;
       text-align: center;
       padding: 40px;
     }
-    button {
-      margin: 12px;
-      padding: 14px 28px;
-      font-size: 18px;
+    h1 {
+      margin-bottom: 10px;
+    }
+    .desc {
+      color: #555;
+      margin-bottom: 30px;
+    }
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 300px;
+      margin: auto;
+    }
+    a.button {
+      display: block;
+      padding: 14px 20px;
+      font-size: 16px;
+      background: #333;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+    a.button:hover {
+      background: #555;
     }
   </style>
 </head>
 <body>
-  <h1>AccessTracker</h1>
-  <p>Scegli la modalità:</p>
-  <button onclick="location.href='tracker.html'">📍 Modalità Tracker (Laptop)</button>
-  <button onclick="location.href='controller.html'">📱 Modalità Controller (iPhone)</button>
+  <h1>📡 AccessTracker</h1>
+  <p class="desc">Controlla chi usa i tuoi dispositivi e visualizza i log</p>
+
+  <div class="buttons">
+    <a href="tracker.html" class="button">📍 Modalità Tracker (Mac/PC)</a>
+    <a href="controller.html" class="button">📱 Modalità Controller (iPhone)</a>
+    <a href="accessi_dashboard_completo.html" class="button">📋 Log Accessi con filtri</a>
+    <a href="accessi_grafici_completo.html" class="button">📊 Statistiche e Grafici</a>
+  </div>
 </body>
 </html>
