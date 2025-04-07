@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AccessTracker – Dashboard</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon/accesstracker-icon-192.png" />
+  <meta name="theme-color" content="#202124" />
   <style>
     body {
       font-family: sans-serif;
@@ -50,5 +53,13 @@
     <a href="accessi_dashboard_completo.html" class="button">📋 Log Accessi con filtri</a>
     <a href="accessi_grafici_completo.html" class="button">📊 Statistiche e Grafici</a>
   </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(reg => console.log("✅ Service Worker registrato"))
+        .catch(err => console.error("❌ Errore Service Worker", err));
+    }
+  </script>
 </body>
 </html>
