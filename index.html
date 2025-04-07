@@ -3,15 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AccessTracker</title>
-  <link rel="manifest" href="manifest.json" />
+  <title>AccessTracker - Seleziona modalità</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+    }
+    button {
+      margin: 12px;
+      padding: 14px 28px;
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Access Tracker</h1>
-  <p>Controllo in corso...</p>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="app.js"></script>
+  <h1>AccessTracker</h1>
+  <p>Scegli la modalità:</p>
+  <button onclick="location.href='tracker.html'">📍 Modalità Tracker (Laptop)</button>
+  <button onclick="location.href='controller.html'">📱 Modalità Controller (iPhone)</button>
 </body>
 </html>
