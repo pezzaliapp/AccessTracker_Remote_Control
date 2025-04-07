@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccessTracker - Dashboard con Grafici</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { margin-bottom: 10px; }
+    canvas { background: #fff; border-radius: 8px; padding: 10px; margin-top: 20px; }
+    .dashboard { display: flex; flex-wrap: wrap; gap: 20px; }
+    .chart-container { flex: 1 1 45%; min-width: 300px; }
+  </style>
+</head>
+<body>
+  <h1>📊 Dashboard Accessi</h1>
+  <p>Dati aggiornati in tempo reale da Firebase</p>
+
+  <div class="dashboard">
+    <div class="chart-container">
+      <h3>📅 Accessi per Giorno (ultimi 7)</h3>
+      <canvas id="chartGiorni"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>💻 Accessi per Dispositivo</h3>
+      <canvas id="chartDispositivi"></canvas>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
+      authDomain: "accesstracker-5d3f9.firebaseapp.com",
+      projectId: "accesstracker-5d3f9",
+      storageBucket: "accesstracker-5d3f9.appspot.com",
+      messagingSenderId: "331964316032",
+      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const accessiRef = db.collection("accessi");
+
+    const days = Array.from({length: 7}, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toLocaleDateString("it-IT", { timeZone: "Europe/Rome" });
+    });
+
+    const accessiPerGiorno = Object.fromEntries(days.map(d => [d, 0]));
+    const accessiPerDispositivo = {};
+
+    accessiRef.orderBy("timestamp", "desc").onSnapshot(snapshot => {
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const date = new Date(data.timestamp);
+        const localDate = date.toLocaleDateString("it-IT", { timeZone: "Europe/Rome" });
+        const device = data.dispositivo || "N/D";
+
+        if (accessiPerGiorno[localDate] !== undefined) {
+          accessiPerGiorno[localDate]++;
+        }
+
+        accessiPerDispositivo[device] = (accessiPerDispositivo[device] || 0) + 1;
+      });
+
+      renderCharts();
+    });
+
+    function renderCharts() {
+      const giorni = Object.keys(accessiPerGiorno);
+      const valoriGiorni = Object.values(accessiPerGiorno);
+
+      const ctx1 = document.getElementById('chartGiorni').getContext('2d');
+      new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: giorni,
+          datasets: [{
+            label: 'Accessi',
+            data: valoriGiorni,
+            fill: true,
+            tension: 0.3
+          }]
+        }
+      });
+
+      const dispositivi = Object.keys(accessiPerDispositivo);
+      const valoriDispositivi = Object.values(accessiPerDispositivo);
+
+      const ctx2 = document.getElementById('chartDispositivi').getContext('2d');
+      new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: dispositivi,
+          datasets: [{
+            label: 'Accessi',
+            data: valoriDispositivi
+          }]
+        }
+      });
+    }
+  </script>
+
+  <div style="margin-top: 30px;">
+    <button onclick="exportCSV()">⬇️ Esporta CSV</button>
+    <button onclick="resetGrafici()">🔄 Reset Grafici</button>
+    <button onclick="location.href='index.html'">🏠 Torna alla Home</button>
+  </div>
+
+  <script>
+    function exportCSV() {
+      let csv = "timestamp,dispositivo\n";
+      accessiRef.orderBy("timestamp", "desc").get().then(snapshot => {
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const date = new Date(data.timestamp).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
+          const dispositivo = data.dispositivo || "N/D";
+          csv += `"${date}","${dispositivo}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "accessi_grafico.csv";
+        a.click();
+      });
+    }
+
+    function resetGrafici() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
+
+</html>
