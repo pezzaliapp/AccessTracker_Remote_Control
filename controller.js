@@ -1,5 +1,6 @@
+// → Inserisci qui la tua vera API Key dal pannello Generali → I tuoi app
 const firebaseConfig = {
-  apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
+  apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
   authDomain: "accesstracker-5d3f9.firebaseapp.com",
   projectId: "accesstracker-5d3f9",
   storageBucket: "accesstracker-5d3f9.appspot.com",
@@ -9,47 +10,48 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// Mostra un messaggio visivo sullo schermo
-function mostraMessaggio(msg, emoji = "") {
+// Funzione di debug in pagina
+function mostraMsg(txt, emoji="") {
   const p = document.createElement("p");
-  p.textContent = `${emoji} ${msg}`;
-  p.style.fontSize = "18px";
-  p.style.marginTop = "20px";
+  p.textContent = `${emoji} ${txt}`;
+  p.style.margin = "8px 0";
   document.body.appendChild(p);
 }
 
-const toggleBtn = document.getElementById("toggleTracker");
+// Selettore bottone
+const btn = document.getElementById("toggleTracker");
 let statoAttuale = false;
 
+mostraMsg("🕒 Inizializzo Firebase…");
+
+// Login anonimo
 firebase.auth().signInAnonymously()
   .then(() => {
-    mostraMessaggio("🔐 Accesso anonimo riuscito");
-
+    mostraMsg("🔐 Login anonimo OK");
     const db = firebase.firestore();
     const ref = db.collection("controllo").doc("stato");
 
-    // Monitoraggio dello stato attuale
+    // Ascolta il documento in real-time
     ref.onSnapshot(doc => {
-      if (doc.exists) {
-        statoAttuale = doc.data().attivo === true;
-        toggleBtn.textContent = statoAttuale ? "🛑 Disattiva Tracking" : "✅ Attiva Tracking";
-        toggleBtn.dataset.attivo = statoAttuale;
-        mostraMessaggio(`📡 Stato attuale: ${statoAttuale ? "ATTIVO" : "DISATTIVO"}`);
-      } else {
-        toggleBtn.textContent = "⚠️ Documento non trovato";
-        mostraMessaggio("❌ Documento 'stato' non esiste");
+      if (!doc.exists) {
+        mostraMsg("⚠ Documento 'stato' non trovato");
+        btn.textContent = "⚠️ Errore";
+        return;
       }
+      statoAttuale = doc.data().attivo === true;
+      btn.textContent = statoAttuale ? "🛑 Disattiva Tracking" : "✅ Attiva Tracking";
+      mostraMsg("📡 Stato remoto = " + statoAttuale);
     });
 
-    // Clic sul pulsante
-    toggleBtn.onclick = async () => {
-      const nuovoStato = toggleBtn.dataset.attivo === "true" ? false : true;
-      await ref.set({ attivo: nuovoStato });
-      mostraMessaggio(`✍️ Stato impostato su ${nuovoStato}`);
+    // Al click del pulsante
+    btn.onclick = () => {
+      const nuovo = !statoAttuale;
+      ref.set({ attivo: nuovo })
+        .then(() => mostraMsg(`✍️ Impostato attivo = ${nuovo}`))
+        .catch(e => mostraMsg("❌ Errore update: " + e.message));
     };
-
   })
-  .catch((error) => {
-    mostraMessaggio("❌ Errore accesso anonimo");
-    console.error(error);
+  .catch(err => {
+    mostraMsg("❌ Errore login anonimo: " + err.code, "❌");
+    console.error(err);
   });
