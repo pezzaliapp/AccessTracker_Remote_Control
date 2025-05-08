@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registro Accessi</title>
+  <title>📋 Registro Accessi</title>
   <link rel="stylesheet" href="style.css">
   <style>
     body { font-family: sans-serif; padding: 30px; background: #f9f9f9; color: #333; }
@@ -11,7 +11,8 @@
     ul { list-style-type: none; padding: 0; }
     li { margin-bottom: 12px; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .actions { margin-top: 20px; }
-    .home-btn { background-color: #333; color: white; border: none; }
+    .home-btn { background-color: #333; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer;}
+    #error { margin-top: 20px; color: red; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -32,94 +33,98 @@
   </div>
 
   <ul id="accessList"></ul>
+  <div id="error"></div>
 
-  <!-- Firebase compat -->
+  <!-- 1) Core SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- 2) Auth compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <!-- 3) Firestore compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
   <script>
+    // → Metti qui ESATTAMENTE la tua API key dal pannello Generali → I tuoi app
     const firebaseConfig = {
-      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
+      apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
       projectId: "accesstracker-5d3f9",
       storageBucket: "accesstracker-5d3f9.appspot.com",
       messagingSenderId: "331964316032",
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
-
     firebase.initializeApp(firebaseConfig);
 
-    firebase.auth().signInAnonymously().then(() => {
-      const db = firebase.firestore();
-      const accessiRef = db.collection("accessi");
-      let accessiData = [];
+    const db = firebase.firestore();
+    const accessiRef = db.collection("accessi");
+    let accessiData = [];
 
-      accessiRef.orderBy("timestamp", "desc").onSnapshot(snapshot => {
-        accessiData = [];
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          accessiData.push({
-            timestamp: new Date(data.timestamp).toLocaleString("it-IT"),
-            userAgent: data.userAgent,
-            dispositivo: data.dispositivo || "N/D",
-            id: doc.id
+    // Login anonimo prima di tutto
+    firebase.auth().signInAnonymously()
+      .then(() => {
+        // Una volta loggato, attiviamo lo snapshot realtime
+        accessiRef.orderBy("timestamp", "desc")
+          .onSnapshot(snapshot => {
+            accessiData = [];
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              accessiData.push({
+                timestamp: new Date(data.timestamp).toLocaleString("it-IT"),
+                userAgent: data.userAgent,
+                dispositivo: data.dispositivo || "N/D",
+                id: doc.id
+              });
+            });
+            renderList(accessiData);
+          }, err => {
+            document.getElementById("error").textContent = "Errore lettura dati: " + err.message;
           });
-        });
-        renderList(accessiData);
+      })
+      .catch(err => {
+        document.getElementById("error").textContent = "Errore autenticazione Firebase: " + err.code;
       });
 
-      function renderList(data) {
-        const list = document.getElementById("accessList");
-        list.innerHTML = "";
-        data.forEach(item => {
-          const li = document.createElement("li");
-          li.innerHTML = `<strong>📅 ${item.timestamp}</strong><br>
-                          <em>🖥️ Dispositivo:</em> ${item.dispositivo}<br>
-                          <small>🌐 ${item.userAgent}</small>`;
-          list.appendChild(li);
-        });
-      }
+    function renderList(data) {
+      const list = document.getElementById("accessList");
+      list.innerHTML = "";
+      data.forEach(item => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>📅 ${item.timestamp}</strong><br>
+                        <em>🖥️ Dispositivo:</em> ${item.dispositivo}<br>
+                        <small>🌐 ${item.userAgent}</small>`;
+        list.appendChild(li);
+      });
+    }
 
-      function filterResults() {
-        const search = document.getElementById("searchBox").value.toLowerCase();
-        const filter = document.getElementById("deviceFilter").value;
-        const filtered = accessiData.filter(item =>
-          (item.userAgent.toLowerCase().includes(search) ||
-           item.timestamp.toLowerCase().includes(search)) &&
-          (filter === "" || item.dispositivo === filter)
-        );
-        renderList(filtered);
-      }
+    function filterResults() {
+      const search = document.getElementById("searchBox").value.toLowerCase();
+      const filter = document.getElementById("deviceFilter").value;
+      const filtered = accessiData.filter(item =>
+        (item.userAgent.toLowerCase().includes(search) ||
+         item.timestamp.toLowerCase().includes(search)) &&
+        (filter === "" || item.dispositivo === filter)
+      );
+      renderList(filtered);
+    }
 
-      function esportaCSV() {
-        let csv = "timestamp,dispositivo,userAgent\n";
-        accessiData.forEach(item => {
-          csv += `"${item.timestamp}","${item.dispositivo}","${item.userAgent.replace(/"/g, "'")}"\n`;
-        });
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "accessi.csv";
-        a.click();
-      }
+    function esportaCSV() {
+      let csv = "timestamp,dispositivo,userAgent\n";
+      accessiData.forEach(item => {
+        csv += `"${item.timestamp}","${item.dispositivo}","${item.userAgent.replace(/"/g, "'')}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "accessi.csv";
+      a.click();
+    }
 
-      function cancellaTutti() {
-        if (confirm("Vuoi davvero cancellare tutti gli accessi?")) {
-          accessiData.forEach(item => {
-            accessiRef.doc(item.id).delete();
-          });
-        }
-      }
-
-      // Espongo le funzioni per l'HTML
-      window.filterResults = filterResults;
-      window.esportaCSV = esportaCSV;
-      window.cancellaTutti = cancellaTutti;
-    }).catch(err => {
-      console.error("Errore autenticazione anonima:", err);
-      document.getElementById("accessList").innerHTML = "<li>Errore autenticazione Firebase.</li>";
-    });
+    function cancellaTutti() {
+      if (!confirm("Vuoi davvero cancellare tutti gli accessi?")) return;
+      accessiData.forEach(item => {
+        accessiRef.doc(item.id).delete();
+      });
+    }
   </script>
 </body>
 </html>
