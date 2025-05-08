@@ -2,68 +2,22 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test AccessTracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AccessTracker – Tracker</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>🔍 Test Tracker Firebase</h1>
+  <h1>📍 Access Tracker</h1>
+  <p>Controllo in corso…</p>
   <div id="log"></div>
 
   <!-- 1) Core SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <!-- 2) Auth deve venire PRIMA di Firestore -->
+  <!-- 2) Auth compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <!-- 3) Firestore -->
+  <!-- 3) Firestore compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-  <script>
-    const log = msg => {
-      const p = document.createElement('p');
-      p.textContent = msg;
-      document.getElementById('log').appendChild(p);
-      console.log(msg);
-    };
-
-    // 🔧 Config
-    const cfg = {
-      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
-      authDomain: "accesstracker-5d3f9.firebaseapp.com",
-      projectId: "accesstracker-5d3f9",
-      storageBucket: "accesstracker-5d3f9.appspot.com",
-      messagingSenderId: "331964316032",
-      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-    };
-    firebase.initializeApp(cfg);
-    log("✔ Firebase inizializzato");
-
-    // 🔐 Provo l'accesso anonimo
-    firebase.auth().signInAnonymously()
-      .then(() => {
-        log("🔐 Login anonimo OK");
-        // Provo a leggere il doc stato
-        return firebase.firestore().collection('controllo').doc('stato').get();
-      })
-      .then(doc => {
-        if (!doc.exists) {
-          log("⚠️ Documento 'controllo/stato' non esiste");
-          return;
-        }
-        const att = doc.data().attivo;
-        log("📡 Stato remoto attivo = " + att);
-        if (att) {
-          // Provo a scrivere nella collezione accessi
-          return firebase.firestore().collection('accessi').add({
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
-          }).then(() => log("✅ Accesso registrato con successo"))
-            .catch(e => log("❌ Errore scrittura accessi: " + e.message));
-        } else {
-          log("⏸ Tracker disattivato da remoto");
-        }
-      })
-      .catch(err => {
-        log("❌ Errore auth anonimo: " + err.code + " / " + err.message);
-      });
-  </script>
+  <!-- 4) Il tuo script tracker -->
+  <script src="app.js"></script>
 </body>
 </html>
