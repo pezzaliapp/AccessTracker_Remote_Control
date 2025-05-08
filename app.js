@@ -9,24 +9,49 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// 🔐 Login anonimo prima di qualsiasi operazione
+// Mostra messaggi visivi
+function mostraMessaggio(msg, emoji = "") {
+  const p = document.createElement("p");
+  p.textContent = `${emoji} ${msg}`;
+  p.style.fontSize = "18px";
+  p.style.marginTop = "20px";
+  document.body.appendChild(p);
+}
+
+mostraMessaggio("🕒 Connessione a Firebase...");
+
 firebase.auth().signInAnonymously()
   .then(() => {
-    const db = firebase.firestore();
+    mostraMessaggio("🔐 Accesso anonimo OK");
 
-    db.collection("controllo").doc("stato").get().then(doc => {
-      if (doc.exists && doc.data().attivo) {
+    const db = firebase.firestore();
+    const statoRef = db.collection("controllo").doc("stato");
+
+    statoRef.onSnapshot(doc => {
+      if (!doc.exists) {
+        mostraMessaggio("⚠️ Documento 'stato' mancante");
+        return;
+      }
+
+      const data = doc.data();
+      if (data.attivo === true) {
+        mostraMessaggio("🟢 Tracker attivo. Registrazione in corso...");
+
         db.collection("accessi").add({
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent
         }).then(() => {
-          console.log("✅ Accesso registrato.");
+          mostraMessaggio("✅ Accesso registrato!");
+        }).catch(err => {
+          mostraMessaggio("❌ Errore scrittura su Firebase");
+          console.error(err);
         });
       } else {
-        console.log("ℹ️ Tracker disattivato da remoto.");
+        mostraMessaggio("⛔ Tracker disattivato dal controller");
       }
     });
   })
-  .catch((error) => {
-    console.error("❌ Errore autenticazione anonima:", error);
+  .catch(error => {
+    mostraMessaggio("❌ Errore accesso anonimo");
+    console.error(error);
   });
