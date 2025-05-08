@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🔍 TEST Firebase Config</title>
+</head>
+<body>
+  <h1>🔍 TEST Firebase Config</h1>
+  <pre id="output">⏳ Sto verificando autenticazione…</pre>
+
+  <!-- SDK compatibility -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    const out = document.getElementById('output');
+
+    // Metti qui la tua config esattamente come la vedi in Firebase Console → Impostazioni progetto → Web SDK
+    const firebaseConfig = {
+      apiKey: "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      authDomain: "accesstracker-5d3f9.firebaseapp.com",
+      projectId: "accesstracker-5d3f9",
+      storageBucket: "accesstracker-5d3f9.appspot.com",
+      messagingSenderId: "331964316032",
+      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
+    };
+
+    try {
+      firebase.initializeApp(firebaseConfig);
+    } catch(e) {
+      out.textContent = "❌ initializeApp error: " + e.message;
+      throw e;
+    }
+
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    auth.signInAnonymously()
+      .then(() => {
+        out.textContent = "✅ Auth anonimo OK\nSto leggendo document 'controllo/stato'…";
+        return db.doc('controllo/stato').get();
+      })
+      .then(doc => {
+        if (!doc.exists) {
+          out.textContent += "\n⚠️ Doc non trovato!";
+        } else {
+          out.textContent += "\n📄 Dati: " + JSON.stringify(doc.data(),null,2);
+        }
+      })
+      .catch(err => {
+        out.textContent = "❌ ERRORE: " + err.code + "\n" + err.message;
+      });
+  </script>
+</body>
+</html>
