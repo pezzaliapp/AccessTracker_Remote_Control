@@ -9,21 +9,21 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// Autenticazione anonima
+// 🔐 Autenticazione anonima
 firebase.auth().signInAnonymously()
   .then(() => {
-    console.log("Accesso anonimo riuscito");
+    console.log("✅ Accesso anonimo riuscito");
   })
   .catch((error) => {
-    console.error("Errore di accesso anonimo:", error.code, error.message);
+    console.error("❌ Errore di accesso anonimo:", error.code, error.message);
   });
 
 const db = firebase.firestore();
 
 function setStatus(status) {
   db.collection("controllo").doc("stato").set({ attivo: status }).then(() => {
-    alert("Stato aggiornato: " + status);
+    alert("✅ Stato aggiornato: " + status);
   }).catch((error) => {
-    console.error("Errore aggiornamento stato:", error);
+    console.error("❌ Errore aggiornamento stato:", error);
   });
 }
