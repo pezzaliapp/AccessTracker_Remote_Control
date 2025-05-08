@@ -9,25 +9,21 @@
   <meta name="theme-color" content="#202124" />
   <style>
     :root {
-      --bg-light: #f8f8f8;
-      --text-light: #000;
-      --bg-dark: #000;
-      --text-dark: #fff;
-      --button-bg-light: #333;
-      --button-bg-dark: #1f1f1f;
-      --error-red: #e33;
+      --bg-light:#f8f8f8; --text-light:#000;
+      --bg-dark:#000;     --text-dark:#fff;
+      --button-bg-light:#333; --button-bg-dark:#1f1f1f;
+      --error-red:#e33;
     }
-    html[data-theme='light'] {background: var(--bg-light);color: var(--text-light);}
-    html[data-theme='dark']  {background: var(--bg-dark); color: var(--text-dark);}
+    html[data-theme='light']{background:var(--bg-light);color:var(--text-light)}
+    html[data-theme='dark'] {background:var(--bg-dark); color:var(--text-dark)}
     body{font-family:sans-serif;text-align:center;padding:40px;transition:.3s}
-    #themeToggle{position:fixed;top:20px;right:20px;font-size:24px;background:none;border:none;cursor:pointer;color:inherit}
+    #themeToggle{position:fixed;top:20px;right:20px;font-size:24px;background:none;border:none;color:inherit;cursor:pointer}
     h1{margin-bottom:.2em}
     .controls{margin:20px 0;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
-    .controls input,.controls select,.controls button,.controls a{padding:10px 16px;border:1px solid #555;border-radius:6px;background:var(--button-bg-light);color:#fff;text-decoration:none;cursor:pointer;transition:.3s}
-    html[data-theme='dark'] .controls input,
-    html[data-theme='dark'] .controls select,
-    html[data-theme='dark'] .controls button,
-    html[data-theme='dark'] .controls a{background:var(--button-bg-dark)}
+    .controls input,.controls select,.controls button,.controls a{
+      padding:10px 16px;border:1px solid #555;border-radius:6px;
+      background:var(--button-bg-light);color:#fff;cursor:pointer;transition:.3s}
+    html[data-theme='dark'] .controls *{background:var(--button-bg-dark)}
     table{width:100%;max-width:600px;border-collapse:collapse;margin:20px auto}
     th,td{padding:8px;border:1px solid #ccc;font-size:14px}
     #error{color:var(--error-red);margin-top:20px}
@@ -36,6 +32,7 @@
   </style>
 </head>
 <body>
+
   <button id="themeToggle" title="Cambia tema">🌓</button>
   <h1>📋 Registro Accessi</h1>
   <p>Visualizza, filtra, esporta o cancella gli accessi tracciati da AccessTracker.</p>
@@ -57,9 +54,7 @@
   </div>
 
   <table id="logTable">
-    <thead>
-      <tr><th>Timestamp</th><th>Dispositivo / UA</th></tr>
-    </thead>
+    <thead><tr><th>Timestamp</th><th>Dispositivo / UA</th></tr></thead>
     <tbody></tbody>
   </table>
 
@@ -71,51 +66,44 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    /* ---------- gestione tema ---------- */
+    /* ---------- Tema chiaro/scuro ---------- */
     const htmlTag = document.documentElement;
     const saved   = localStorage.getItem('theme');
     const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const applyTheme = t => {htmlTag.setAttribute('data-theme',t);localStorage.setItem('theme',t)};
-    applyTheme(saved || (prefers ? 'dark':'light'));
-    document.getElementById('themeToggle').addEventListener('click',()=>{
-      applyTheme(htmlTag.getAttribute('data-theme')==='dark'?'light':'dark');
-    });
+    function applyTheme(t){htmlTag.setAttribute('data-theme',t);localStorage.setItem('theme',t)}
+    applyTheme(saved || (prefers ? 'dark' : 'light'));
+    document.getElementById('themeToggle')
+      .addEventListener('click',()=>applyTheme(htmlTag.dataset.theme==='dark'?'light':'dark'));
 
-    /* ---------- Firebase config & init safe ---------- */
-    const firebaseConfig = {
-      apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
-      authDomain: "accesstracker-5d3f9.firebaseapp.com",
-      projectId: "accesstracker-5d3f9",
-      storageBucket: "accesstracker-5d3f9.appspot.com",
-      messagingSenderId: "331964316032",
-      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-    };
+    /* ---------- Config Firebase ---------- */
+    const firebaseConfig={
+      apiKey:"AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      authDomain:"accesstracker-5d3f9.firebaseapp.com",
+      projectId:"accesstracker-5d3f9",
+      storageBucket:"accesstracker-5d3f9.appspot.com",
+      messagingSenderId:"331964316032",
+      appId:"1:331964316032:web:8fcc4efdc180a40201a965"};
+    firebase.initializeApp(firebaseConfig);
 
-    // se un'altra pagina/service-worker ha già inizializzato Firebase
-    // ri-uso quell'istanza; altrimenti la creo ora
-    const app = firebase.apps.length
-              ? firebase.app()
-              : firebase.initializeApp(firebaseConfig);
+    /* ---------- Riferimenti DOM ---------- */
+    const auth=firebase.auth(),db=firebase.firestore();
+    const tbody=document.querySelector('#logTable tbody');
+    const errDiv=document.getElementById('error');
+    const spinner=document.getElementById('spinner');
+    const exportBtn=document.getElementById('exportBtn');
+    const clearBtn=document.getElementById('clearBtn');
+    const searchIn=document.getElementById('search');
+    const filterDev=document.getElementById('filterDevice');
+    let allLogs=[];
 
-    const auth = app.auth();
-    const db   = app.firestore();
+    /* ---------- Funzioni ---------- */
+    function fmt(ts){return new Date(ts).toLocaleString('it-IT');}
 
-    /* ---------- elementi DOM ---------- */
-    const tbody     = document.querySelector('#logTable tbody');
-    const errDiv    = document.getElementById('error');
-    const spinner   = document.getElementById('spinner');
-    const exportBtn = document.getElementById('exportBtn');
-    const clearBtn  = document.getElementById('clearBtn');
-    const searchIn  = document.getElementById('search');
-    const filterDev = document.getElementById('filterDevice');
-    let   allLogs   = [];
-
-    /* ---------- funzioni helper ---------- */
     function renderTable(logs){
       tbody.innerHTML='';
       logs.forEach(l=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${l.timestamp}</td><td>${l.dispositivo||l.userAgent}</td>`;
+        tr.innerHTML=`<td>${fmt(l.timestamp)}</td><td>${l.dispositivo||l.userAgent}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -125,13 +113,12 @@
       const dev =filterDev.value;
       const filtered=allLogs.filter(l=>{
         const ua=(l.userAgent||'').toLowerCase();
-        const ts=(l.timestamp||'').toLowerCase();
-        return (!dev||l.dispositivo===dev)&&(!term||ua.includes(term)||ts.includes(term));
+        return (!dev||l.dispositivo===dev)&&(!term||ua.includes(term));
       });
       renderTable(filtered);
     }
 
-    /* ---------- carico i dati ---------- */
+    /* ---------- Caricamento dati ---------- */
     spinner.style.display='inline-block';
     auth.signInAnonymously()
       .then(()=>db.collection('accessi').orderBy('timestamp','desc').get())
@@ -145,17 +132,18 @@
         errDiv.textContent='❌ Errore Firebase: '+e.message;
       });
 
-    /* ---------- eventi UI ---------- */
+    /* ---------- Eventi UI ---------- */
     searchIn.addEventListener('input',filterAndRender);
     filterDev.addEventListener('change',filterAndRender);
 
     exportBtn.addEventListener('click',()=>{
-      const rows=[["timestamp","dispositivo/userAgent"],...allLogs.map(l=>[l.timestamp,l.dispositivo||l.userAgent])];
-      const csv=rows.map(r=>r.map(f=>`"${(f||'').toString().replace(/"/g,'""')}"`).join(',')).join('\r\n');
+      const rows=[['timestamp','dispositivo/userAgent'],
+        ...allLogs.map(l=>[fmt(l.timestamp),l.dispositivo||l.userAgent])];
+      const csv=rows.map(r=>r.map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',')).join('\r\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-      const url =URL.createObjectURL(blob);
-      const a   =document.createElement('a');
-      a.href=url;a.download='accessi.csv';a.click();URL.revokeObjectURL(url);
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download='accessi.csv';a.click();
+      URL.revokeObjectURL(url);
     });
 
     clearBtn.addEventListener('click',()=>{
