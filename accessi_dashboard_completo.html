@@ -31,12 +31,17 @@
       padding: 40px;
       transition: all .3s ease;
     }
-    h1 { margin-bottom: 0.2em; }
+    #themeToggle {
+      position: fixed; top: 20px; right: 20px;
+      font-size: 24px; background: none; border: none; cursor: pointer;
+      color: inherit;
+    }
+    h1 { margin-bottom: .2em; }
     .controls {
       margin: 20px 0;
       display: flex; justify-content: center; gap:10px; flex-wrap: wrap;
     }
-    .controls button, .controls a {
+    .controls input, .controls select, .controls button, .controls a {
       padding: 10px 16px;
       border: 1px solid #555;
       border-radius: 6px;
@@ -46,6 +51,8 @@
       cursor: pointer;
       transition: background .3s;
     }
+    html[data-theme='dark'] .controls input,
+    html[data-theme='dark'] .controls select,
     html[data-theme='dark'] .controls button,
     html[data-theme='dark'] .controls a {
       background: var(--button-bg-dark);
@@ -58,7 +65,6 @@
     th, td {
       padding: 8px; border: 1px solid #ccc;
       font-size: 14px;
-      text-align: left;
     }
     #error {
       color: var(--error-red);
@@ -72,6 +78,7 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin-left: 8px;
+      vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -107,13 +114,13 @@
 
   <div id="error"></div>
 
-  <!-- Firebase compat SDK -->
+  <!-- 1) SDK compat Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // Theme toggler
+    // tema
     const htmlTag = document.documentElement;
     const saved   = localStorage.getItem('theme');
     const darkQ   = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -122,14 +129,13 @@
       localStorage.setItem('theme', t);
     }
     applyTheme(saved || (darkQ ? 'dark' : 'light'));
-    document.getElementById('themeToggle')
-      .addEventListener('click', () => {
-        applyTheme(htmlTag.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-      });
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      applyTheme(htmlTag.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
 
-    // Firebase config (copia esatto dalla Console Firebase)
+    // --- CONFIG FIREBASE (copiato pari pari dal tuo progetto!) ---
     const firebaseConfig = {
-      apiKey: "AlzaSyCm9Ilf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      apiKey: "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
       projectId: "accesstracker-5d3f9",
       storageBucket: "accesstracker-5d3f9.appspot.com",
@@ -137,16 +143,17 @@
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
     firebase.initializeApp(firebaseConfig);
+    // --------------------------------------------------------------
 
-    const auth       = firebase.auth();
-    const db         = firebase.firestore();
-    const tbody      = document.querySelector('#logTable tbody');
-    const errDiv     = document.getElementById('error');
-    const spinner    = document.getElementById('spinner');
-    const exportBtn  = document.getElementById('exportBtn');
-    const clearBtn   = document.getElementById('clearBtn');
-    const searchInp  = document.getElementById('search');
-    const filterDev  = document.getElementById('filterDevice');
+    const auth      = firebase.auth();
+    const db        = firebase.firestore();
+    const tbody     = document.querySelector('#logTable tbody');
+    const errDiv    = document.getElementById('error');
+    const spinner   = document.getElementById('spinner');
+    const exportBtn = document.getElementById('exportBtn');
+    const clearBtn  = document.getElementById('clearBtn');
+    const searchIn  = document.getElementById('search');
+    const filterDev = document.getElementById('filterDevice');
     let allLogs = [];
 
     function renderTable(logs) {
@@ -159,7 +166,7 @@
     }
 
     function filterAndRender() {
-      const term = searchInp.value.toLowerCase();
+      const term = searchIn.value.toLowerCase();
       const dev  = filterDev.value;
       const filtered = allLogs.filter(l => {
         const ua = (l.userAgent || '').toLowerCase();
@@ -170,7 +177,7 @@
       renderTable(filtered);
     }
 
-    // Carica i log
+    // carica dati
     spinner.style.display = 'inline-block';
     auth.signInAnonymously()
       .then(() => db.collection('accessi').orderBy('timestamp','desc').get())
@@ -184,47 +191,36 @@
         errDiv.textContent = '❌ Errore Firebase: ' + e.message;
       });
 
-    // UI events
-    searchInp.addEventListener('input', filterAndRender);
+    // eventi UI
+    searchIn.addEventListener('input', filterAndRender);
     filterDev.addEventListener('change', filterAndRender);
 
     exportBtn.addEventListener('click', () => {
-      // Costruisci CSV con CRLF
-      const header = ['timestamp','dispositivo/userAgent'];
-      const rows = allLogs.map(l => [l.timestamp, l.dispositivo||l.userAgent]);
-      const csvContent = [header, ...rows]
-        .map(r => r.map(f => `"${(f||'').replace(/"/g,'""')}"`).join(','))
-        .join('\r\n');
-
-      const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
-      if (navigator.msSaveBlob) {
-        navigator.msSaveBlob(blob, 'accessi.csv');
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'accessi.csv';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      const rows = [
+        ['timestamp','dispositivo/userAgent'],
+        ...allLogs.map(l => [l.timestamp, l.dispositivo || l.userAgent])
+      ];
+      const csv = rows.map(r =>
+        r.map(f => `"${(f||'').toString().replace(/"/g,'""')}"`).join(',')
+      ).join('\r\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'accessi.csv'; a.click();
+      URL.revokeObjectURL(url);
     });
 
     clearBtn.addEventListener('click', () => {
-      if (!confirm('Sicuro di voler cancellare tutti i log?')) return;
+      if (!confirm('Sicuro di cancellare tutti i log?')) return;
       spinner.style.display = 'inline-block';
       db.collection('accessi').get()
         .then(sn => Promise.all(sn.docs.map(d => d.ref.delete())))
         .then(() => {
-          allLogs = [];
-          renderTable([]);
-          spinner.style.display = 'none';
+          allLogs = []; renderTable([]); spinner.style.display = 'none';
         })
         .catch(e => {
-          spinner.style.display = 'none';
           errDiv.textContent = '❌ Errore cancellazione: ' + e.message;
+          spinner.style.display = 'none';
         });
     });
   </script>
