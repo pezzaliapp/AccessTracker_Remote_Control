@@ -1,68 +1,70 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="light">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>🔎 TEST Firebase Config</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🔍 TEST Firebase Config</title>
   <style>
-    body { font-family:sans-serif; padding:30px; background:#fafafa; color:#333 }
-    #status { margin-top:20px; padding:10px; border-radius:4px; }
-    .ok { background:#e0ffe0; border:1px solid #0a0 }
-    .fail { background:#ffe0e0; border:1px solid #a00 }
-    #spinner {
-      display:inline-block; width:20px; height:20px;
-      border:3px solid #999; border-top-color:#555;
-      border-radius:50%; animation:spin .8s linear infinite;
-      vertical-align:middle; margin-left:10px;
-    }
-    @keyframes spin { to { transform:rotate(360deg) } }
+    body { font-family:sans-serif; padding:30px; }
+    .box { padding:20px; border:1px solid #ccc; border-radius:6px; margin-top:20px; }
+    .ok { background:#e0ffe0; color:#060; }
+    .err { background:#ffe0e0; color:#600; }
   </style>
 </head>
 <body>
   <h1>🔎 TEST Firebase Config</h1>
-  <p>Verifica autenticazione e lettura Firestore (1 doc)</p>
-  <div id="status">Inizializzo... <span id="spinner"></span></div>
+  <p>Verifica autenticazione anonima e lettura Firestore (1 doc)</p>
+  <div id="result" class="box">⏳ Inizio test…</div>
 
   <!-- compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
   <script>
-    const statusEl = document.getElementById('status');
-    function setStatus(msg, ok){
-      statusEl.textContent = msg;
-      statusEl.className = ok ? 'ok' : 'fail';
-      document.getElementById('spinner').style.display = 'none';
+  (async()=>{
+    const res = document.getElementById('result');
+
+    // ⚠️ COPIA ESATTAMENTE DAL CONSOLE FIREBASE → Impostazioni → Generali
+    const firebaseConfig = {
+      apiKey:       "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      authDomain:   "accesstracker-5d3f9.firebaseapp.com",
+      projectId:    "accesstracker-5d3f9",
+      storageBucket:"accesstracker-5d3f9.appspot.com",
+      messagingSenderId:"331964316032",
+      appId:        "1:331964316032:web:8fcc4efdc180a40201a965"
+    };
+
+    // Inizializza
+    try {
+      firebase.initializeApp(firebaseConfig);
+    } catch(e) {
+      return res.className='box err', res.textContent = '❌ initializeApp: '+e.message;
     }
 
-    // Config esatto copiato dal tuo pannello Firebase → Impostazioni progetto → Generali
-    const firebaseConfig = {
-      apiKey: "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
-      authDomain: "accesstracker-5d3f9.firebaseapp.com",
-      projectId: "accesstracker-5d3f9",
-      storageBucket: "accesstracker-5d3f9.appspot.com",
-      messagingSenderId: "331964316032",
-      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-    };
-    firebase.initializeApp(firebaseConfig);
+    // Login anonimo
+    try {
+      res.textContent = '⏳ signInAnonymously…';
+      await firebase.auth().signInAnonymously();
+      res.textContent = '⏳ Auth OK, leggo 1 doc da accessi…';
+    } catch(e) {
+      return res.className='box err',
+             res.textContent = '❌ Auth failed: ('+e.code+') '+e.message;
+    }
 
-    // 1) provo l’autenticazione anonima
-    firebase.auth().signInAnonymously()
-      .then(() => {
-        setStatus('✅ Autenticazione anonima OK', true);
-        // 2) provo a leggere un documento qualsiasi da “accessi” (max 1)
-        return firebase.firestore()
-          .collection('accessi')
-          .limit(1)
-          .get();
-      })
-      .then(sn => {
-        setStatus(`✅ Lettura Firestore OK (trovati ${sn.size} doc${sn.size===1?'':'s'})`, true);
-      })
-      .catch(err => {
-        setStatus(`❌ ERRORE: (${err.code}) ${err.message}`, false);
-        console.error(err);
-      });
+    // Lettura Firestore
+    try {
+      const snap = await firebase.firestore()
+        .collection('accessi')
+        .limit(1)
+        .get();
+      res.className = 'box ok';
+      res.textContent = `✅ Firestore OK: trovati ${snap.size} doc`;
+    } catch(e) {
+      res.className = 'box err';
+      res.textContent = '❌ Firestore read failed: ('+e.code+') '+e.message;
+    }
+  })();
   </script>
 </body>
 </html>
