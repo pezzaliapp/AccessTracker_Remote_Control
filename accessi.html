@@ -26,6 +26,7 @@
 
     firebase.initializeApp(firebaseConfig);
 
+    // 🔐 Login anonimo
     firebase.auth().signInAnonymously()
       .then(() => {
         const db = firebase.firestore();
@@ -41,7 +42,10 @@
           });
         });
       })
-      .catch(e => console.error("❌ Login anonimo:", e));
+      .catch((e) => {
+        console.error("❌ Errore login Firebase anonimo:", e);
+        document.getElementById("accessList").innerHTML = "<li>Errore autenticazione.</li>";
+      });
   </script>
 </body>
 </html>
