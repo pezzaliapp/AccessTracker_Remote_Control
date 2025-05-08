@@ -1,100 +1,96 @@
 // --- CONFIG FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
+  apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
   authDomain: "accesstracker-5d3f9.firebaseapp.com",
   projectId: "accesstracker-5d3f9",
   storageBucket: "accesstracker-5d3f9.appspot.com",
   messagingSenderId: "331964316032",
   appId: "1:331964316032:web:8fcc4efdc180a40201a965"
 };
+
 firebase.initializeApp(firebaseConfig);
-// -------------------------
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
-// Elementi UI
-const btn        = document.getElementById('toggleBtn');
-const elTime     = document.getElementById('currentTime');
-const elSince    = document.getElementById('connectedSince');
-const elLast     = document.getElementById('lastToggle');
-const elStandby  = document.getElementById('standbyTime');
+const btn       = document.getElementById('toggleBtn');
+const infoBlock = document.getElementById('info');
+let startTs, statusUnsub, clockInterval;
 
-// Stato interno
-let lastToggleTime = null;
-let currentState   = null;
-const pageLoadTime = new Date();
-
-// Utility: ms → “HH:mm:ss”
-function msToHMS(ms) {
-  const s = Math.floor(ms/1000)%60;
-  const m = Math.floor(ms/60000)%60;
-  const h = Math.floor(ms/3600000);
-  return `${h}h ${m}m ${s}s`;
+// helper per formattare HH:MM:SS
+function fmtTime(d) {
+  return d.toLocaleTimeString('it-IT', { hour12:false });
 }
 
-// Aggiorna orologio e timer
-function updateTimers() {
-  const now = new Date();
-  // ora corrente
-  elTime.textContent = `🕒 Ora: ${now.toLocaleTimeString()}`;
-  // connesso da
-  const connMs = now - pageLoadTime;
-  elSince.textContent = `📡 Connesso da: ${msToHMS(connMs)}`;
+// aggiorna il crono
+function startClock() {
+  if (clockInterval) clearInterval(clockInterval);
+  startTs = Date.now();
+  clockInterval = setInterval(() => {
+    const elapsed = Date.now() - startTs;
+    const s = Math.floor(elapsed/1000)%60;
+    const m = Math.floor(elapsed/60000)%60;
+    const h = Math.floor(elapsed/3600000);
+    infoBlock.querySelector('p:nth-child(2)').textContent =
+      `🚀 Connesso da: ${h}h ${m}m ${s}s`;
+  }, 1000);
+}
 
-  if (lastToggleTime) {
-    elLast.textContent = `🔁 Ultima modifica: ${lastToggleTime.toLocaleString()}`;
-    // se disattivo, calcola standby da lastToggle
-    if (currentState === false) {
-      const offMs = now - lastToggleTime;
-      elStandby.textContent = `💤 Standby: ${msToHMS(offMs)}`;
-    } else {
-      elStandby.textContent = `💤 Standby: —`;
-    }
+// scrive dati su schermo
+function setInfo({ remote, modified }) {
+  // ora corrente
+  infoBlock.querySelector('p:nth-child(1)').textContent =
+    `🕒 Ora: ${fmtTime(new Date())}`;
+
+  // ultima modifica documento
+  infoBlock.querySelector('p:nth-child(3)').textContent =
+    `✏️ Ultima modifica: ${modified
+      ? fmtTime(modified.toDate())
+      : '–'}`;
+
+  // se remoto attivo
+  if (remote) {
+    btn.textContent = '🛑 Disattiva Tracking';
+    btn.disabled = false;
+    startClock();
+  } else {
+    btn.textContent = '✅ Attiva Tracking';
+    btn.disabled = false;
+    if (clockInterval) clearInterval(clockInterval);
+    infoBlock.querySelector('p:nth-child(2)').textContent =
+      `🚀 Connesso da: –`;
   }
 }
 
-// Autenticazione anonima e listener Firestore
-firebase.auth().signInAnonymously()
+// inizializza tutto
+auth.signInAnonymously()
   .then(() => {
-    const db = firebase.firestore();
-    const statoRef = db.collection("controllo").doc("stato");
-
-    // appena connessi, abilita il pulsante
-    btn.disabled = false;
-
-    // ascolto in real-time
-    statoRef.onSnapshot(doc => {
-      if (!doc.exists) {
-        console.warn("Doc 'stato' non trovato");
-        return;
-      }
-      const newState = !!doc.data().attivo;
-      // se cambia lo stato, registro la data/ora
-      if (newState !== currentState) {
-        lastToggleTime = new Date();
-      }
-      currentState = newState;
-
-      // aggiorno label del pulsante
-      btn.textContent = currentState
-        ? "🔴 Disattiva Tracking"
-        : "✅ Attiva Tracking";
-
-      // aggiorna subito i timer
-      updateTimers();
+    // sottoscrivi alle modifiche dello stato
+    const ref = db.collection('controllo').doc('stato');
+    statusUnsub = ref.onSnapshot(doc => {
+      const data = doc.exists ? doc.data() : {};
+      setInfo({
+        remote: data.attivo === true,
+        modified: data.__lastUpdate // se lo tenevi
+      });
+    }, err => {
+      btn.textContent = '❌ Errore Firebase';
+      console.error(err);
     });
   })
   .catch(err => {
-    console.error("Errore login anonimo:", err);
-    btn.textContent = "❌ Errore Firebase";
+    btn.textContent = '❌ Errore Firebase';
+    console.error(err);
   });
 
-// click sul pulsante per cambiare stato
+// al click: inverte lo stato remoto
 btn.addEventListener('click', () => {
   btn.disabled = true;
-  const db = firebase.firestore();
-  db.collection("controllo").doc("stato")
-    .set({ attivo: !currentState })
-    .finally(() => btn.disabled = false);
+  const ref = db.collection('controllo').doc('stato');
+  // leggiamo l'ultimo valore
+  ref.get().then(doc => {
+    const current = doc.exists && doc.data().attivo === true;
+    return ref.set({ attivo: !current }, { merge: true });
+  }).catch(err => {
+    console.error(err);
+  });
 });
-
-// aggiorna orologio e timer ogni secondo
-setInterval(updateTimers, 1000);
