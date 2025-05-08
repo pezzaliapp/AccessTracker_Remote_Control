@@ -84,6 +84,7 @@
   </div>
 
   <script>
+    // gestione tema light/dark
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = localStorage.getItem('theme');
     const htmlTag = document.documentElement;
@@ -104,6 +105,7 @@
       applyTheme(current === 'dark' ? 'light' : 'dark');
     });
 
+    // registra service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
         .then(reg => console.log("✅ Service Worker registrato"))
