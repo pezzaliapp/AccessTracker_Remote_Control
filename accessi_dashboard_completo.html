@@ -1,44 +1,132 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registro Accessi</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📋 Registro Accessi</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon/accesstracker-icon-192.png" />
+  <meta name="theme-color" content="#202124" />
   <style>
-    body { font-family: sans-serif; padding: 30px; background: #f9f9f9; color: #333; }
-    input, select, button { margin: 8px; padding: 10px 16px; font-size: 16px; }
-    ul { list-style-type: none; padding: 0; }
-    li { margin-bottom: 12px; padding: 12px; background: #fff; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .actions { margin-top: 20px; }
-    .home-btn { background-color: #333; color: white; border: none; cursor: pointer; }
-    .error { color: red; margin-top: 20px; }
+    :root {
+      --bg-light: #f8f8f8;
+      --text-light: #000;
+      --bg-dark: #000;
+      --text-dark: #fff;
+      --button-bg-light: #333;
+      --button-bg-dark: #1f1f1f;
+      --error-red: #e33;
+    }
+    html[data-theme='light'] {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    html[data-theme='dark'] {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+      transition: all .3s ease;
+    }
+    #themeToggle {
+      position: fixed; top: 20px; right: 20px;
+      font-size: 24px; background: none; border: none; cursor: pointer;
+      color: inherit;
+    }
+    h1 { margin-bottom: 0.2em; }
+    .controls {
+      margin: 20px 0;
+      display: flex; justify-content: center; gap:10px; flex-wrap: wrap;
+    }
+    .controls button, .controls a {
+      padding: 10px 16px;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: var(--button-bg-light);
+      color: white;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .3s;
+    }
+    html[data-theme='dark'] .controls button,
+    html[data-theme='dark'] .controls a {
+      background: var(--button-bg-dark);
+    }
+    table {
+      width: 100%; max-width: 600px;
+      border-collapse: collapse;
+      margin: 20px auto;
+    }
+    th, td {
+      padding: 8px; border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    #error {
+      color: var(--error-red);
+      margin-top: 20px;
+    }
+    #spinner {
+      display: inline-block;
+      width: 24px; height: 24px;
+      border: 3px solid #999;
+      border-top-color: #555;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
+
+  <button id="themeToggle" title="Cambia tema">🌓</button>
   <h1>📋 Registro Accessi</h1>
   <p>Visualizza, filtra, esporta o cancella gli accessi tracciati da AccessTracker.</p>
-  
-  <input type="text" id="searchBox" placeholder="🔍 Cerca per browser o data..." oninput="filterResults()" />
-  <select id="deviceFilter" onchange="filterResults()">
-    <option value="">📱 Tutti i dispositivi</option>
-  </select>
 
-  <div class="actions">
-    <button onclick="esportaCSV()">⬇️ Esporta CSV</button>
-    <button onclick="cancellaTutti()">🗑️ Cancella Tutti</button>
-    <button class="home-btn" onclick="location.href='index.html'">🏠 Torna alla Home</button>
+  <div class="controls">
+    <input id="search" placeholder="🔍 Cerca per browser o UA…" />
+    <select id="filterDevice">
+      <option value="">📱 Tutti i dispositivi</option>
+      <option value="MacPrivato">💻 MacPrivato</option>
+      <option value="WinAziendale">🖥️ WinAziendale</option>
+    </select>
   </div>
 
-  <ul id="accessList"></ul>
-  <p id="errorMsg" class="error" hidden>Errore autenticazione Firebase.</p>
+  <div class="controls">
+    <button id="exportBtn">⬇️ Esporta CSV</button>
+    <button id="clearBtn">🗑️ Cancella Tutti</button>
+    <a href="index.html">🏠 Torna alla Home</a>
+    <div id="spinner" style="display:none"></div>
+  </div>
 
-  <!-- Firebase compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <table id="logTable">
+    <thead>
+      <tr><th>Timestamp</th><th>Dispositivo / UA</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="error"></div>
+
+  <!-- Firebase compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
   <script>
-    // Configurazione Firebase (stessa di tutte le pagine)
+    // tema
+    const htmlTag = document.documentElement;
+    const saved = localStorage.getItem('theme');
+    const darkQ = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    function apply(t){ htmlTag.setAttribute('data-theme',t); localStorage.setItem('theme',t) }
+    apply(saved|| (darkQ?'dark':'light'));
+    document.getElementById('themeToggle')
+      .addEventListener('click', ()=> apply(htmlTag.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    // config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
@@ -48,105 +136,86 @@
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
 
-    // Autenticazione anonima
-    firebase.auth().signInAnonymously()
-      .then(() => {
-        const db = firebase.firestore();
-        const accessiRef = db.collection("accessi");
-        let accessiData = [];
+    // elementi
+    const tbody      = document.querySelector('#logTable tbody');
+    const errDiv     = document.getElementById('error');
+    const spinner    = document.getElementById('spinner');
+    const exportBtn  = document.getElementById('exportBtn');
+    const clearBtn   = document.getElementById('clearBtn');
+    const searchInp  = document.getElementById('search');
+    const filterDev  = document.getElementById('filterDevice');
+    let allLogs = [];
 
-        // Popola la select dei dispositivi una sola volta
-        const deviceFilter = document.getElementById("deviceFilter");
-        function aggiornaDeviceFilter() {
-          const devices = Array.from(new Set(accessiData.map(a => a.dispositivo || "N/D")));
-          deviceFilter.innerHTML = `<option value="">📱 Tutti i dispositivi</option>`;
-          devices.forEach(d => {
-            const opt = document.createElement("option");
-            opt.value = d;
-            opt.textContent = d;
-            deviceFilter.appendChild(opt);
-          });
-        }
-
-        // Listener realtime
-        accessiRef.orderBy("timestamp", "desc").onSnapshot(snapshot => {
-          accessiData = snapshot.docs.map(doc => {
-            const d = doc.data();
-            return {
-              id: doc.id,
-              timestamp: new Date(d.timestamp).toLocaleString("it-IT"),
-              dispositivo: d.dispositivo || "N/D",
-              userAgent: d.userAgent
-            };
-          });
-          aggiornaDeviceFilter();
-          renderList(accessiData);
-        }, err => {
-          console.error("Firestore error:", err);
-        });
-
-        // Render lista
-        window.renderList = function(data) {
-          const list = document.getElementById("accessList");
-          list.innerHTML = "";
-          data.forEach(item => {
-            const li = document.createElement("li");
-            li.innerHTML = `
-              📅 <strong>${item.timestamp}</strong><br>
-              🖥️ Dispositivo: ${item.dispositivo}<br>
-              🌐 <small>${item.userAgent}</small>
-            `;
-            list.appendChild(li);
-          });
-        };
-
-        // Filtri
-        window.filterResults = function() {
-          const search = document.getElementById("searchBox").value.toLowerCase();
-          const filter = deviceFilter.value;
-          const filtered = accessiData.filter(item =>
-            (item.userAgent.toLowerCase().includes(search) ||
-             item.timestamp.toLowerCase().includes(search)) &&
-            (filter === "" || item.dispositivo === filter)
-          );
-          renderList(filtered);
-        };
-
-        // Esporta CSV
-        window.esportaCSV = function() {
-          let csv = "timestamp,dispositivo,userAgent\n";
-          const dataToExport = accessiData; // oppure filtrati se preferisci export only view
-          dataToExport.forEach(item => {
-            const ua = item.userAgent.replace(/"/g, '""');
-            csv += `"${item.timestamp}","${item.dispositivo}","${ua}"\n`;
-          });
-          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "accessi.csv";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        };
-
-        // Cancella tutto
-        window.cancellaTutti = function() {
-          if (!confirm("Vuoi davvero cancellare tutti gli accessi?")) return;
-          const batch = db.batch();
-          accessiData.forEach(item => {
-            batch.delete(accessiRef.doc(item.id));
-          });
-          batch.commit();
-        };
-
-      })
-      .catch(err => {
-        console.error("Auth error:", err);
-        document.getElementById("errorMsg").hidden = false;
+    function renderTable(logs){
+      tbody.innerHTML = '';
+      logs.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${l.timestamp}</td><td>${l.dispositivo||l.userAgent}</td>`;
+        tbody.appendChild(tr);
       });
+    }
+
+    function filterAndRender(){
+      const term = searchInp.value.toLowerCase();
+      const dev  = filterDev.value;
+      let filtered = allLogs.filter(l=>{
+        const ua = (l.userAgent||'').toLowerCase();
+        const ts = (l.timestamp||'').toLowerCase();
+        return (!dev||l.dispositivo===dev)
+            && (!term||ua.includes(term)||ts.includes(term));
+      });
+      renderTable(filtered);
+    }
+
+    // login e caricamento log
+    spinner.style.display = 'inline-block';
+    auth.signInAnonymously()
+      .then(()=>{
+        return db.collection('accessi').orderBy('timestamp','desc').get();
+      })
+      .then(sn=>{
+        allLogs = sn.docs.map(d=>d.data());
+        filterAndRender();
+        spinner.style.display = 'none';
+      })
+      .catch(e=>{
+        spinner.style.display = 'none';
+        errDiv.textContent = '❌ Errore autenticazione Firebase: ' + e.message;
+      });
+
+    // eventi UI
+    searchInp.addEventListener('input', filterAndRender);
+    filterDev.addEventListener('change', filterAndRender);
+
+    exportBtn.addEventListener('click',()=>{
+      const rows = [['timestamp','dispositivo/userAgent'],...allLogs.map(l=>[l.timestamp, l.dispositivo||l.userAgent])];
+      const csv = rows.map(r=>r.map(f=>`"${f.replace(/"/g,'""')}"`).join(',')).join('\r\n');
+      const blob = new Blob([csv],{type:'text/csv'});
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'accessi.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    clearBtn.addEventListener('click',()=>{
+      if(!confirm('Sicuro di voler cancellare tutti i log?')) return;
+      spinner.style.display = 'inline-block';
+      db.collection('accessi').get()
+        .then(sn=> Promise.all(sn.docs.map(d=>d.ref.delete())))
+        .then(()=>{
+          allLogs = [];
+          renderTable([]);
+          spinner.style.display = 'none';
+        })
+        .catch(e=>{
+          errDiv.textContent = '❌ Errore cancellazione: ' + e.message;
+          spinner.style.display = 'none';
+        });
+    });
   </script>
 </body>
 </html>
