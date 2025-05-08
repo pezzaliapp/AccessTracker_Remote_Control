@@ -2,19 +2,21 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Access Tracker</title>
   <link rel="manifest" href="manifest.json" />
-  <style>body{font-family:sans-serif;text-align:center;padding:40px}</style>
+  <style>
+    body{font-family:sans-serif;text-align:center;padding:40px}
+  </style>
 </head>
 <body>
-  <h1>Access Tracker</h1>
+  <h1>📍 Tracker</h1>
   <p id="msg">Attesa login…</p>
 
   <!-- form di login -->
   <form id="loginForm" style="margin:20px auto;max-width:300px">
-    <input  type="email"    id="email"    placeholder="e-mail" value="tuo@email.it" required><br>
-    <input  type="password" id="password" placeholder="password"           required><br>
+    <input type="email"    id="email"    placeholder="e-mail"  value="TUO@MAIL.IT" required><br>
+    <input type="password" id="password" placeholder="password"                required><br>
     <button type="submit">Accedi</button>
   </form>
 
@@ -31,36 +33,34 @@
       projectId:"accesstracker-5d3f9"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth=firebase.auth(), db=firebase.firestore();
 
-    const auth = firebase.auth();
-    const db   = firebase.firestore();
-    const msg  = document.getElementById('msg');
-    const form = document.getElementById('loginForm');
+    const msg=document.getElementById('msg');
+    const form=document.getElementById('loginForm');
 
-    /* login manuale */
-    form.addEventListener('submit', e=>{
+    form.addEventListener('submit',e=>{
       e.preventDefault();
-      auth.signInWithEmailAndPassword(form.email.value.trim(), form.password.value)
-          .catch(err=>alert('Login fallito: '+err.message));
+      auth.signInWithEmailAndPassword(
+        form.email.value.trim(),
+        form.password.value
+      ).catch(err=>alert("Login fallito: "+err.message));
     });
 
-    /* quando loggato, avvia tracker */
-    auth.onAuthStateChanged(user=>{
-      if(!user){msg.textContent='Attesa login…';return;}
+    auth.onAuthStateChanged(async user=>{
+      if(!user){return;}
       form.style.display='none';
       msg.textContent='🔄 Controllo in corso…';
 
-      db.collection('controllo').doc('stato').get().then(doc=>{
-        if(doc.exists && doc.data().attivo){
-          db.collection('accessi').add({
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
-          }).then(()=>msg.textContent='✅ Accesso registrato.')
-            .catch(e=>msg.textContent='❌ Errore scrittura: '+e.message);
-        }else{
-          msg.textContent='⛔ Tracker disattivato da remoto.';
-        }
-      });
+      const stato=await db.collection('controllo').doc('stato').get();
+      if(stato.exists && stato.data().attivo){
+        db.collection('accessi').add({
+          timestamp:new Date().toISOString(),
+          userAgent:navigator.userAgent
+        }).then(()=>msg.textContent='✅ Accesso registrato.')
+          .catch(e=>msg.textContent='❌ Errore scrittura: '+e.message);
+      }else{
+        msg.textContent='⛔ Tracker disattivato da remoto.';
+      }
     });
   </script>
 </body>
