@@ -1,5 +1,6 @@
+// → Copia qui la tua API key esatta dal pannello Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
+  apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",      // ← Sostituisci con la tua!
   authDomain: "accesstracker-5d3f9.firebaseapp.com",
   projectId: "accesstracker-5d3f9",
   storageBucket: "accesstracker-5d3f9.appspot.com",
@@ -10,54 +11,47 @@ const firebaseConfig = {
 // Inizializza Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Funzione per visualizzare messaggi
-function mostraMessaggio(testo, emoji = "") {
+// Aiuta a scrivere log in pagina
+function log(msg, emoji = "") {
   const p = document.createElement("p");
-  p.textContent = `${emoji} ${testo}`;
-  p.style.fontSize = "18px";
-  p.style.marginTop = "12px";
-  document.body.appendChild(p);
+  p.textContent = `${emoji} ${msg}`;
+  p.style.margin = "8px 0";
+  document.getElementById("log").appendChild(p);
+  console.log(msg);
 }
 
-// Mostra messaggio iniziale
-mostraMessaggio("Connessione a Firebase...", "🕒");
+log("🕒 Inizializzo Firebase…");
 
 // Login anonimo
 firebase.auth().signInAnonymously()
   .then(() => {
-    mostraMessaggio("Accesso anonimo riuscito", "🔐");
-
+    log("🔐 Login anonimo OK");
     const db = firebase.firestore();
     const statoRef = db.collection("controllo").doc("stato");
 
-    // Leggi lo stato in tempo reale
+    // Ascolta in tempo reale il documento stato
     statoRef.onSnapshot(doc => {
       if (!doc.exists) {
-        mostraMessaggio("Documento 'stato' non trovato", "⚠️");
+        log("⚠ Documento 'controllo/stato' non trovato");
         return;
       }
+      const attivo = doc.data().attivo;
+      log("📡 Stato remoto = " + attivo);
 
-      const stato = doc.data().attivo;
-
-      if (stato === true) {
-        mostraMessaggio("Tracker attivo. Registro accesso...", "🟢");
-
+      if (attivo === true) {
+        log("🟢 Tracker attivo, registro accesso…");
         db.collection("accessi").add({
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent
-        }).then(() => {
-          mostraMessaggio("Accesso registrato!", "✅");
-        }).catch(err => {
-          mostraMessaggio("Errore scrittura su Firebase", "❌");
-          console.error(err);
-        });
-
+        })
+        .then(() => log("✅ Accesso registrato"))
+        .catch(err => log("❌ Errore scrittura accessi", "❌"), console.error(err));
       } else {
-        mostraMessaggio("Tracker disattivato dal controller", "⛔");
+        log("⏸ Tracker disattivato dal controller");
       }
     });
   })
-  .catch(error => {
-    mostraMessaggio("Errore accesso anonimo", "❌");
-    console.error(error);
+  .catch(err => {
+    log(`❌ Errore login anonimo: ${err.code}`, "❌");
+    console.error(err);
   });
