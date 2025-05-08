@@ -8,6 +8,16 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
+// Autenticazione anonima
+firebase.auth().signInAnonymously()
+  .then(() => {
+    console.log("Accesso anonimo riuscito");
+  })
+  .catch((error) => {
+    console.error("Errore di accesso anonimo:", error.code, error.message);
+  });
+
 const db = firebase.firestore();
 
 function setStatus(status) {
