@@ -8,16 +8,90 @@
   <link rel="icon" href="icon/accesstracker-icon-192.png" />
   <meta name="theme-color" content="#202124" />
   <style>
-    body { font-family:sans-serif; text-align:center; padding:40px; }
-    button { padding:12px 20px; font-size:16px; margin:20px 0; }
-    .status { margin-top:10px; line-height:1.6; opacity:0.9; }
-    #toggleBtn { font-size:16px; cursor:pointer; }
+    :root {
+      --bg-light: #f8f8f8;
+      --text-light: #000;
+      --bg-dark: #000;
+      --text-dark: #fff;
+      --button-bg-light: #333;
+      --button-bg-dark: #1f1f1f;
+      --accent: #06f;
+    }
+    html[data-theme='light'] {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    html[data-theme='dark'] {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+      transition: all .3s ease;
+    }
+    #themeToggle {
+      position: fixed;
+      top: 20px; right: 20px;
+      font-size: 24px;
+      background: none; border: none; cursor: pointer;
+      color: inherit;
+    }
+    h1 { margin-bottom: .2em; }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .buttons a {
+      padding: 12px 16px;
+      text-decoration: none;
+      border-radius: 6px;
+      border: 1px solid #555;
+      background: var(--button-bg-light);
+      color: white;
+      transition: background .3s;
+    }
+    html[data-theme='dark'] .buttons a {
+      background: var(--button-bg-dark);
+    }
+    button#toggleBtn {
+      font-size: 16px;
+      padding: 12px 20px;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      transition: opacity .3s;
+    }
+    button#toggleBtn:disabled {
+      opacity: .6;
+      cursor: default;
+    }
+    .status {
+      margin-top: 24px;
+      line-height: 1.6;
+      opacity: .9;
+    }
   </style>
 </head>
 <body>
 
+  <button id="themeToggle" title="Cambia tema">🌓</button>
+
   <h1>🎮 AccessTracker – Controller</h1>
   <p>Attiva o disattiva il controllo da remoto</p>
+
+  <div class="buttons">
+    <a href="accessi_dashboard_completo.html">📋 Log Accessi</a>
+    <a href="accessi_grafici_completo.html">📊 Statistiche</a>
+    <a href="tracker.html">📍 Tracker</a>
+    <a href="index.html">🏠 Home</a>
+  </div>
 
   <button id="toggleBtn" disabled>⏳ Caricamento...</button>
 
@@ -28,12 +102,33 @@
     <p>💤 Standby: –</p>
   </div>
 
-  <!-- compat SDK Firebase -->
+  <!-- Firebase compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  <!-- il tuo controller.js -->
+  <!-- tuo controller.js -->
   <script src="controller.js" defer></script>
+
+  <script>
+    // tema scuro/chiaro
+    const htmlTag = document.documentElement;
+    const saved = localStorage.getItem('theme');
+    const darkQ = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    function apply(t) {
+      htmlTag.setAttribute('data-theme', t);
+      localStorage.setItem('theme', t);
+    }
+    apply(saved || (darkQ ? 'dark' : 'light'));
+    document.getElementById('themeToggle')
+      .addEventListener('click', () => {
+        apply(htmlTag.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
+
+    // service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js').catch(console.error);
+    }
+  </script>
 </body>
 </html>
