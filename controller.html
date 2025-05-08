@@ -4,143 +4,36 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AccessTracker – Controller</title>
+  <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon/accesstracker-icon-192.png" />
   <meta name="theme-color" content="#202124" />
   <style>
-    :root {
-      --bg-light: #f8f8f8;
-      --text-light: #000;
-      --bg-dark: #000;
-      --text-dark: #fff;
-      --btn-bg-light: #333;
-      --btn-bg-dark: #1f1f1f;
-    }
-    html[data-theme='light'] { background: var(--bg-light); color: var(--text-light); }
-    html[data-theme='dark']  { background: var(--bg-dark);  color: var(--text-dark);  }
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 40px;
-      transition: background 0.3s, color 0.3s;
-    }
-    h1 { margin-bottom: 10px; }
-    p { margin: 8px 0; opacity: 0.8; }
-    #toggleBtn {
-      padding: 12px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    html[data-theme='light'] #toggleBtn { background: var(--btn-bg-light); color: #fff; }
-    html[data-theme='dark']  #toggleBtn { background: var(--btn-bg-dark);  color: #fff; }
-    #info { margin-top: 30px; font-size: 14px; }
-    #info p { text-align: left; display: inline-block; min-width: 240px; }
+    body { font-family:sans-serif; text-align:center; padding:40px; }
+    button { padding:12px 20px; font-size:16px; margin:20px 0; }
+    .status { margin-top:10px; line-height:1.6; opacity:0.9; }
+    #toggleBtn { font-size:16px; cursor:pointer; }
   </style>
 </head>
 <body>
+
   <h1>🎮 AccessTracker – Controller</h1>
   <p>Attiva o disattiva il controllo da remoto</p>
+
   <button id="toggleBtn" disabled>⏳ Caricamento...</button>
 
-  <div id="info">
-    <p id="currentTime">🕒 Ora: –</p><br/>
-    <p id="connectedSince">📡 Connesso da: –</p><br/>
-    <p id="lastToggle">🔁 Ultima modifica: –</p><br/>
-    <p id="standbyTime">💤 Standby: –</p>
+  <div class="status" id="info">
+    <p>🕒 Ora: –</p>
+    <p>🚀 Connesso da: –</p>
+    <p>✏️ Ultima modifica: –</p>
+    <p>💤 Standby: –</p>
   </div>
 
-  <!-- 1) compat SDK:
-       https://firebase.google.com/docs/web/learn-more#modules_and_namespaces -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <!-- compat SDK Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  <script>
-    // ——— Controlla di aver copiato esattamente questa API‐KEY dalla console Firebase → Impostazioni Generali ———
-    const firebaseConfig = {
-      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
-      authDomain: "accesstracker-5d3f9.firebaseapp.com",
-      projectId: "accesstracker-5d3f9",
-      storageBucket: "accesstracker-5d3f9.appspot.com",
-      messagingSenderId: "331964316032",
-      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-    };
-    firebase.initializeApp(firebaseConfig);
-
-    const btn       = document.getElementById('toggleBtn');
-    const elTime    = document.getElementById('currentTime');
-    const elSince   = document.getElementById('connectedSince');
-    const elLast    = document.getElementById('lastToggle');
-    const elStandby = document.getElementById('standbyTime');
-
-    let lastToggleTime = null;
-    let currentState   = null;
-    const startTime    = new Date();
-
-    function msToHMS(ms) {
-      const s = Math.floor(ms/1000) % 60;
-      const m = Math.floor(ms/60000) % 60;
-      const h = Math.floor(ms/3600000);
-      return `${h}h ${m}m ${s}s`;
-    }
-
-    function updateInfo() {
-      const now = new Date();
-      elTime.textContent  = `🕒 Ora: ${now.toLocaleTimeString()}`;
-      elSince.textContent = `📡 Connesso da: ${msToHMS(now - startTime)}`;
-      if (lastToggleTime) {
-        elLast.textContent = `🔁 Ultima modifica: ${lastToggleTime.toLocaleString()}`;
-        if (!currentState) {
-          elStandby.textContent = `💤 Standby: ${msToHMS(now - lastToggleTime)}`;
-        } else {
-          elStandby.textContent = `💤 Standby: –`;
-        }
-      }
-    }
-
-    firebase.auth().signInAnonymously()
-      .then(() => {
-        const db = firebase.firestore();
-        const ref = db.collection("controllo").doc("stato");
-        btn.disabled = false;
-        // ascolta i cambi di stato in tempo reale
-        ref.onSnapshot(doc => {
-          if (!doc.exists) return;
-          const newState = !!doc.data().attivo;
-          if (newState !== currentState) lastToggleTime = new Date();
-          currentState = newState;
-          btn.textContent = currentState
-            ? "🔴 Disattiva Tracking"
-            : "✅ Attiva Tracking";
-          updateInfo();
-        });
-      })
-      .catch(err => {
-        console.error(err);
-        btn.disabled = true;
-        btn.textContent = "❌ Errore Firebase";
-      });
-
-    btn.addEventListener('click', () => {
-      btn.disabled = true;
-      firebase.firestore().collection("controllo").doc("stato")
-        .set({ attivo: !currentState })
-        .finally(() => btn.disabled = false);
-    });
-
-    // aggiorna orologio e standby ogni secondo
-    setInterval(updateInfo, 1000);
-
-    // tema light/dark
-    (()=>{
-      const htmlTag = document.documentElement;
-      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      htmlTag.setAttribute('data-theme',
-        localStorage.getItem('theme') || (sys ? 'dark' : 'light')
-      );
-    })();
-  </script>
+  <!-- il tuo controller.js -->
+  <script src="controller.js" defer></script>
 </body>
 </html>
