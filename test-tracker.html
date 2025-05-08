@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Test AccessTracker</title>
+</head>
+<body>
+  <h1>🔍 TEST ACCESSTRACKER</h1>
+  <div id="log"></div>
+
+  <!-- 1) SDK principale -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <!-- 2) Auth -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <!-- 3) Firestore -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    function log(msg) {
+      const p = document.createElement("p");
+      p.textContent = msg;
+      document.getElementById("log").appendChild(p);
+      console.log(msg);
+    }
+
+    // Config
+    const cfg = {
+      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
+      authDomain: "accesstracker-5d3f9.firebaseapp.com",
+      projectId: "accesstracker-5d3f9",
+      storageBucket: "accesstracker-5d3f9.appspot.com",
+      messagingSenderId: "331964316032",
+      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
+    };
+
+    firebase.initializeApp(cfg);
+    log("✔ Firebase inizializzato");
+
+    // Login anonimo
+    firebase.auth().signInAnonymously()
+      .then(() => {
+        log("🔐 Accesso anonimo OK");
+        return firebase.firestore().collection("controllo").doc("stato").get();
+      })
+      .then(doc => {
+        if (!doc.exists) {
+          log("⚠ Documento 'controllo/stato' NON trovato");
+          return;
+        }
+        log("📡 Stato remoto = " + doc.data().attivo);
+        if (doc.data().attivo) {
+          return firebase.firestore().collection("accessi")
+            .add({ timestamp: new Date().toISOString(), userAgent: navigator.userAgent })
+            .then(() => log("✅ Accesso registrato"));
+        } else {
+          log("⏸ Tracker disattivato");
+        }
+      })
+      .catch(err => {
+        log("❌ ERRORE: " + err.code + " / " + err.message);
+      });
+  </script>
+</body>
+</html>
