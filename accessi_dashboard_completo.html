@@ -117,31 +117,34 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // tema
+    // dark/light theme
     const htmlTag = document.documentElement;
-    const saved = localStorage.getItem('theme');
-    const darkQ = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    function apply(t){ htmlTag.setAttribute('data-theme',t); localStorage.setItem('theme',t) }
-    apply(saved|| (darkQ?'dark':'light'));
+    const saved   = localStorage.getItem('theme');
+    const darkQ   = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    function applyTheme(t) {
+      htmlTag.setAttribute('data-theme', t);
+      localStorage.setItem('theme', t);
+    }
+    applyTheme(saved || (darkQ ? 'dark' : 'light'));
     document.getElementById('themeToggle')
-      .addEventListener('click', ()=> apply(htmlTag.getAttribute('data-theme')==='dark'?'light':'dark'));
+      .addEventListener('click', () => {
+        applyTheme(htmlTag.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
 
-    // config Firebase
-    // ------------------ CON QUESTO ------------------
-const firebaseConfig = {
-  apiKey: "AlzaSyCm9Ilf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",      // ← la tua vera chiave API web, quella in "Impostazioni progetto > Generali"
-  authDomain: "accesstracker-5d3f9.firebaseapp.com",
-  projectId: "accesstracker-5d3f9",
-  storageBucket: "accesstracker-5d3f9.appspot.com",        // ← correggi anche questo
-  messagingSenderId: "331964316032",
-  appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-};
-firebase.initializeApp(firebaseConfig);
-// ---------------------------------------------------------
-    const auth = firebase.auth();
-    const db   = firebase.firestore();
+    // --- CONFIG FIREBASE CORRETTA ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      authDomain: "accesstracker-5d3f9.firebaseapp.com",
+      projectId: "accesstracker-5d3f9",
+      storageBucket: "accesstracker-5d3f9.appspot.com",
+      messagingSenderId: "331964316032",
+      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
+    };
+    firebase.initializeApp(firebaseConfig);
+    // ----------------------------------
 
-    // elementi
+    const auth       = firebase.auth();
+    const db         = firebase.firestore();
     const tbody      = document.querySelector('#logTable tbody');
     const errDiv     = document.getElementById('error');
     const spinner    = document.getElementById('spinner');
@@ -151,7 +154,7 @@ firebase.initializeApp(firebaseConfig);
     const filterDev  = document.getElementById('filterDevice');
     let allLogs = [];
 
-    function renderTable(logs){
+    function renderTable(logs) {
       tbody.innerHTML = '';
       logs.forEach(l => {
         const tr = document.createElement('tr');
@@ -160,30 +163,28 @@ firebase.initializeApp(firebaseConfig);
       });
     }
 
-    function filterAndRender(){
+    function filterAndRender() {
       const term = searchInp.value.toLowerCase();
       const dev  = filterDev.value;
-      let filtered = allLogs.filter(l=>{
-        const ua = (l.userAgent||'').toLowerCase();
-        const ts = (l.timestamp||'').toLowerCase();
-        return (!dev||l.dispositivo===dev)
-            && (!term||ua.includes(term)||ts.includes(term));
+      const filtered = allLogs.filter(l => {
+        const ua = (l.userAgent || '').toLowerCase();
+        const ts = (l.timestamp || '').toLowerCase();
+        return (!dev || l.dispositivo === dev)
+            && (!term || ua.includes(term) || ts.includes(term));
       });
       renderTable(filtered);
     }
 
-    // login e caricamento log
+    // caricamento dati
     spinner.style.display = 'inline-block';
     auth.signInAnonymously()
-      .then(()=>{
-        return db.collection('accessi').orderBy('timestamp','desc').get();
-      })
-      .then(sn=>{
-        allLogs = sn.docs.map(d=>d.data());
+      .then(() => db.collection('accessi').orderBy('timestamp','desc').get())
+      .then(sn => {
+        allLogs = sn.docs.map(d => d.data());
         filterAndRender();
         spinner.style.display = 'none';
       })
-      .catch(e=>{
+      .catch(e => {
         spinner.style.display = 'none';
         errDiv.textContent = '❌ Errore autenticazione Firebase: ' + e.message;
       });
@@ -192,28 +193,33 @@ firebase.initializeApp(firebaseConfig);
     searchInp.addEventListener('input', filterAndRender);
     filterDev.addEventListener('change', filterAndRender);
 
-    exportBtn.addEventListener('click',()=>{
-      const rows = [['timestamp','dispositivo/userAgent'],...allLogs.map(l=>[l.timestamp, l.dispositivo||l.userAgent])];
-      const csv = rows.map(r=>r.map(f=>`"${f.replace(/"/g,'""')}"`).join(',')).join('\r\n');
-      const blob = new Blob([csv],{type:'text/csv'});
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
+    exportBtn.addEventListener('click', () => {
+      const rows = [
+        ['timestamp','dispositivo/userAgent'],
+        ...allLogs.map(l => [l.timestamp, l.dispositivo||l.userAgent])
+      ];
+      const csv   = rows.map(r =>
+        r.map(f => `"${(f||'').toString().replace(/"/g,'""')}"`).join(',')
+      ).join('\r\n');
+      const blob  = new Blob([csv], { type:'text/csv' });
+      const url   = URL.createObjectURL(blob);
+      const a     = document.createElement('a');
       a.href = url; a.download = 'accessi.csv';
       a.click();
       URL.revokeObjectURL(url);
     });
 
-    clearBtn.addEventListener('click',()=>{
+    clearBtn.addEventListener('click', () => {
       if(!confirm('Sicuro di voler cancellare tutti i log?')) return;
       spinner.style.display = 'inline-block';
       db.collection('accessi').get()
-        .then(sn=> Promise.all(sn.docs.map(d=>d.ref.delete())))
-        .then(()=>{
+        .then(sn => Promise.all(sn.docs.map(d => d.ref.delete())))
+        .then(() => {
           allLogs = [];
           renderTable([]);
           spinner.style.display = 'none';
         })
-        .catch(e=>{
+        .catch(e => {
           errDiv.textContent = '❌ Errore cancellazione: ' + e.message;
           spinner.style.display = 'none';
         });
