@@ -7,69 +7,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon/accesstracker-icon-192.png" />
   <meta name="theme-color" content="#202124" />
-  <style>
-    :root {
-      --bg-light: #f8f8f8;
-      --text-light: #000;
-      --bg-dark: #000;
-      --text-dark: #fff;
-      --button-bg-light: #333;
-      --button-bg-dark: #1f1f1f;
-    }
-    html[data-theme='light'] {
-      background: var(--bg-light);
-      color: var(--text-light);
-    }
-    html[data-theme='dark'] {
-      background: var(--bg-dark);
-      color: var(--text-dark);
-    }
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 40px;
-      transition: all 0.3s ease;
-    }
-    .desc {
-      margin-bottom: 20px;
-      opacity: 0.8;
-    }
-    .buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 300px;
-      margin: auto;
-      margin-top: 30px;
-    }
-    button, a.button {
-      padding: 14px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      text-decoration: none;
-      display: block;
-    }
-    html[data-theme='light'] button, html[data-theme='light'] a.button {
-      background: var(--button-bg-light);
-      color: white;
-    }
-    html[data-theme='dark'] button, html[data-theme='dark'] a.button {
-      background: var(--button-bg-dark);
-      color: white;
-    }
-    #themeToggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      font-size: 20px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: inherit;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <button id="themeToggle" title="Cambia tema">🌓</button>
@@ -87,72 +25,29 @@
     <a class="button" href="index.html">🏠 Torna alla Home</a>
   </div>
 
-  <script type="module">
-    import {{ initializeApp }} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import {{ getFirestore, doc, getDoc, setDoc }} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-    import {{ getAuth, signInAnonymously }} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+  <!-- ↓↓↓ Compat SDK, nell’ordine corretto! ↓↓↓ -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- ↑↑↑ Fine SDK compat ↑↑↑ -->
 
-    const firebaseConfig = {{
-      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
-      authDomain: "accesstracker-5d3f9.firebaseapp.com",
-      projectId: "accesstracker-5d3f9",
-      storageBucket: "accesstracker-5d3f9.appspot.com",
-      messagingSenderId: "331964316032",
-      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-    }};
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth();
-
-    const toggleBtn = document.getElementById("toggleTracker");
-    const docRef = doc(db, "controllo", "stato");
-
-    signInAnonymously(auth).then(() => {{
-      aggiornaStato();
-
-      toggleBtn.onclick = async () => {{
-        const nuovoStato = toggleBtn.dataset.attivo === "true" ? false : true;
-        await setDoc(docRef, {{ attivo: nuovoStato }});
-        aggiornaStato();
-      }};
-    }}).catch(err => {{
-      toggleBtn.textContent = "⚠️ Errore autenticazione";
-      console.error(err);
-    }});
-
-    async function aggiornaStato() {{
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {{
-        const attivo = snap.data().attivo;
-        toggleBtn.textContent = attivo ? "🛑 Disattiva Tracking" : "✅ Attiva Tracking";
-        toggleBtn.dataset.attivo = attivo;
-      }} else {{
-        toggleBtn.textContent = "⚠️ Documento non trovato";
-      }}
-    }}
-  </script>
+  <!-- Tuo controller.js -->
+  <script src="controller.js"></script>
 
   <script>
+    // Theme toggle (lo stesso che avevi già)
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = localStorage.getItem('theme');
     const htmlTag = document.documentElement;
-
-    function applyTheme(theme) {{
+    function applyTheme(theme) {
       htmlTag.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
-    }}
-
-    if (savedTheme) {{
-      applyTheme(savedTheme);
-    }} else {{
-      applyTheme(systemPrefersDark ? 'dark' : 'light');
-    }}
-
-    document.getElementById('themeToggle').addEventListener('click', () => {{
-      const current = htmlTag.getAttribute('data-theme');
-      applyTheme(current === 'dark' ? 'light' : 'dark');
-    }});
+    }
+    if (savedTheme) applyTheme(savedTheme);
+    else applyTheme(systemPrefersDark ? 'dark' : 'light');
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      applyTheme(htmlTag.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
   </script>
 </body>
 </html>
