@@ -4,20 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>🔍 TEST Firebase Config</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; background: #f4f4f4; color: #333; }
+    #status { margin-top: 20px; padding: 16px; border-radius: 4px; }
+    .ok { background: #d4edda; color: #155724; }
+    .err { background: #f8d7da; color: #721c24; white-space: pre-wrap; }
+  </style>
 </head>
 <body>
   <h1>🔍 TEST Firebase Config</h1>
-  <pre id="output">⏳ Sto verificando autenticazione…</pre>
+  <p>Verifica che l’API-Key e la lettura di Firestore funzionino.</p>
+  <div id="status">Loading…</div>
 
-  <!-- SDK compatibility -->
+  <!-- 1) Core SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <!-- 2) Auth compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <!-- 3) Firestore compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    const out = document.getElementById('output');
+    const statusEl = document.getElementById('status');
 
-    // Metti qui la tua config esattamente come la vedi in Firebase Console → Impostazioni progetto → Web SDK
+    // -------------- CONFIGURAZIONE FIREBASE --------------
     const firebaseConfig = {
       apiKey: "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
@@ -26,31 +35,31 @@
       messagingSenderId: "331964316032",
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
-
-    try {
-      firebase.initializeApp(firebaseConfig);
-    } catch(e) {
-      out.textContent = "❌ initializeApp error: " + e.message;
-      throw e;
-    }
-
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db   = firebase.firestore();
+    // -----------------------------------------------------
 
+    // Login anonimo
     auth.signInAnonymously()
       .then(() => {
-        out.textContent = "✅ Auth anonimo OK\nSto leggendo document 'controllo/stato'…";
-        return db.doc('controllo/stato').get();
+        statusEl.textContent = '✅ Autenticazione anonima riuscita';
+        statusEl.className = 'ok';
+        // Proviamo a leggere un solo documento dalla collection "accessi"
+        return db.collection('accessi').limit(1).get();
       })
-      .then(doc => {
-        if (!doc.exists) {
-          out.textContent += "\n⚠️ Doc non trovato!";
+      .then(snapshot => {
+        if (snapshot.empty) {
+          statusEl.textContent += '\nℹ️ La collection "accessi" è vuota (ma la chiave va).';
         } else {
-          out.textContent += "\n📄 Dati: " + JSON.stringify(doc.data(),null,2);
+          const data = snapshot.docs[0].data();
+          statusEl.textContent += '\n✅ Lettura Firestore OK:\n' + JSON.stringify(data, null, 2);
         }
       })
       .catch(err => {
-        out.textContent = "❌ ERRORE: " + err.code + "\n" + err.message;
+        statusEl.textContent = '❌ ERRORE:\n' + err;
+        statusEl.className = 'err';
+        console.error(err);
       });
   </script>
 </body>
