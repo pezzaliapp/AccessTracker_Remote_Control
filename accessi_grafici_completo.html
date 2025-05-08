@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AccessTracker - Dashboard con Grafici</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📊 Dashboard Accessi</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
     h1 { margin-bottom: 10px; }
-    canvas { background: #fff; border-radius: 8px; padding: 10px; margin-top: 20px; }
     .dashboard { display: flex; flex-wrap: wrap; gap: 20px; }
-    .chart-container { flex: 1 1 45%; min-width: 300px; }
+    .chart-container { flex: 1 1 45%; min-width: 300px; background: #fff; padding: 10px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    button, a { margin: 8px; padding: 10px 16px; font-size: 16px; }
+    #error { color: red; margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>📊 Dashboard Accessi</h1>
   <p>Dati aggiornati in tempo reale da Firebase</p>
-
   <div class="dashboard">
     <div class="chart-container">
       <h3>📅 Accessi per Giorno (ultimi 7)</h3>
@@ -28,141 +28,105 @@
       <canvas id="chartDispositivi"></canvas>
     </div>
   </div>
+  <div>
+    <button onclick="exportCSV()">⬇️ Esporta CSV</button>
+    <button onclick="resetGrafici()">🔄 Reset Grafici</button>
+    <button onclick="svuotaDati()">🗑️ Svuota Dati</button>
+    <button onclick="location.href='index.html'">🏠 Torna alla Home</button>
+  </div>
+  <div id="error"></div>
 
-  <!-- Firebase compat -->
+  <!-- 1) Core SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- 2) Auth compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <!-- 3) Firestore compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
+      apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
       projectId: "accesstracker-5d3f9",
       storageBucket: "accesstracker-5d3f9.appspot.com",
       messagingSenderId: "331964316032",
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
-
     firebase.initializeApp(firebaseConfig);
 
-    firebase.auth().signInAnonymously().then(() => {
-      const db = firebase.firestore();
-      const accessiRef = db.collection("accessi");
+    const db = firebase.firestore();
+    const accessiRef = db.collection("accessi");
+    let chartG=null, chartD=null;
 
-      let chartGiorni = null;
-      let chartDispositivi = null;
-
-      accessiRef.orderBy("timestamp", "desc").onSnapshot(snapshot => {
-        const days = Array.from({ length: 7 }, (_, i) => {
-          const d = new Date();
-          d.setDate(d.getDate() - (6 - i));
-          return d.toLocaleDateString("it-IT", { timeZone: "Europe/Rome" });
-        });
-
-        const accessiPerGiorno = Object.fromEntries(days.map(d => [d, 0]));
-        const accessiPerDispositivo = {};
-
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const date = new Date(data.timestamp);
-          const localDate = date.toLocaleDateString("it-IT", { timeZone: "Europe/Rome" });
-          const device = data.dispositivo || "N/D";
-
-          if (accessiPerGiorno[localDate] !== undefined) {
-            accessiPerGiorno[localDate]++;
-          }
-
-          accessiPerDispositivo[device] = (accessiPerDispositivo[device] || 0) + 1;
-        });
-
-        renderCharts(accessiPerGiorno, accessiPerDispositivo);
+    // Login anonimo
+    firebase.auth().signInAnonymously()
+      .then(() => {
+        accessiRef.orderBy("timestamp","desc")
+          .onSnapshot(snapshot => {
+            // Prepara dati
+            const days = Array.from({length:7},(_,i)=>{
+              const d=new Date(); d.setDate(d.getDate()-(6-i));
+              return d.toLocaleDateString("it-IT",{timeZone:"Europe/Rome"});
+            });
+            const perGiorno = Object.fromEntries(days.map(d=>[d,0]));
+            const perDisp   = {};
+            snapshot.forEach(doc=>{
+              const data = doc.data();
+              const date = new Date(data.timestamp)
+                              .toLocaleDateString("it-IT",{timeZone:"Europe/Rome"});
+              if(perGiorno[date]!==undefined) perGiorno[date]++;
+              const dev = data.dispositivo||"N/D";
+              perDisp[dev]=(perDisp[dev]||0)+1;
+            });
+            renderCharts(perGiorno, perDisp);
+          }, e=>{
+            document.getElementById("error").textContent="Errore dati: "+e.message;
+          });
+      })
+      .catch(e=>{
+        document.getElementById("error").textContent="Auth error: "+e.code;
       });
 
-      function renderCharts(accessiPerGiorno, accessiPerDispositivo) {
-        if (chartGiorni) chartGiorni.destroy();
-        if (chartDispositivi) chartDispositivi.destroy();
+    function renderCharts(daily, disp){
+      // Distruggi se già esistenti
+      if(chartG) chartG.destroy();
+      if(chartD) chartD.destroy();
+      // Giorni
+      const ctx1=document.getElementById("chartGiorni").getContext("2d");
+      chartG=new Chart(ctx1,{type:"line", data:{
+        labels:Object.keys(daily),
+        datasets:[{label:"Accessi",data:Object.values(daily),fill:true,tension:0.3}]
+      }});
+      // Dispositivi
+      const ctx2=document.getElementById("chartDispositivi").getContext("2d");
+      chartD=new Chart(ctx2,{type:"bar", data:{
+        labels:Object.keys(disp),
+        datasets:[{label:"Accessi",data:Object.values(disp)}]
+      }});
+    }
 
-        const giorni = Object.keys(accessiPerGiorno);
-        const valoriGiorni = Object.values(accessiPerGiorno);
-
-        const ctx1 = document.getElementById('chartGiorni').getContext('2d');
-        chartGiorni = new Chart(ctx1, {
-          type: 'line',
-          data: {
-            labels: giorni,
-            datasets: [{
-              label: 'Accessi',
-              data: valoriGiorni,
-              fill: true,
-              tension: 0.3
-            }]
-          }
+    function exportCSV(){
+      let csv="timestamp,dispositivo\n";
+      accessiRef.orderBy("timestamp","desc").get().then(snap=>{
+        snap.forEach(doc=>{
+          const d=doc.data();
+          csv += `"${new Date(d.timestamp).toLocaleString("it-IT")}","${d.dispositivo||"N/D"}"\n`;
         });
-
-        const dispositivi = Object.keys(accessiPerDispositivo);
-        const valoriDispositivi = Object.values(accessiPerDispositivo);
-
-        const ctx2 = document.getElementById('chartDispositivi').getContext('2d');
-        chartDispositivi = new Chart(ctx2, {
-          type: 'bar',
-          data: {
-            labels: dispositivi,
-            datasets: [{
-              label: 'Accessi',
-              data: valoriDispositivi
-            }]
-          }
-        });
-      }
-
-      window.exportCSV = () => {
-        let csv = "timestamp,dispositivo\n";
-        accessiRef.orderBy("timestamp", "desc").get().then(snapshot => {
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            const date = new Date(data.timestamp).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
-            const dispositivo = data.dispositivo || "N/D";
-            csv += `"${date}","${dispositivo}"\n`;
-          });
-          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "accessi_grafico.csv";
-          a.click();
-        });
-      }
-
-      window.resetGrafici = () => location.reload();
-
-      window.svuotaDati = () => {
-        if (confirm("Vuoi davvero cancellare tutti i dati (operazione irreversibile)?")) {
-          accessiRef.get().then(snapshot => {
-            const batch = db.batch();
-            snapshot.forEach(doc => {
-              batch.delete(doc.ref);
-            });
-            return batch.commit();
-          }).then(() => {
-            alert("Dati eliminati con successo.");
-          }).catch(err => {
-            console.error("Errore eliminazione dati:", err);
-          });
-        }
-      }
-
-    }).catch(err => {
-      document.body.innerHTML += "<p>❌ Errore autenticazione Firebase.</p>";
-      console.error(err);
-    });
+        const blob=new Blob([csv],{type:"text/csv"});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=url; a.download="accessi_grafici.csv"; a.click();
+      });
+    }
+    function resetGrafici(){ location.reload(); }
+    function svuotaDati(){
+      if(!confirm("Svuotare tutti i dati?")) return;
+      accessiRef.get().then(snap=>{
+        const batch=db.batch();
+        snap.forEach(d=>batch.delete(d.ref));
+        return batch.commit();
+      });
+    }
   </script>
-
-  <div style="margin-top: 30px;">
-    <button onclick="exportCSV()">⬇️ Esporta CSV</button>
-    <button onclick="resetGrafici()">🔄 Reset Grafici</button>
-    <button onclick="svuotaDati()">🗑️ Svuota Dati</button>
-    <button onclick="location.href='index.html'">🏠 Torna alla Home</button>
-  </div>
 </body>
 </html>
