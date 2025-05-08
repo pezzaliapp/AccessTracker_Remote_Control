@@ -33,8 +33,10 @@
 
   <ul id="accessList"></ul>
 
+  <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
@@ -46,68 +48,78 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const accessiRef = db.collection("accessi");
 
-    let accessiData = [];
+    firebase.auth().signInAnonymously().then(() => {
+      const db = firebase.firestore();
+      const accessiRef = db.collection("accessi");
+      let accessiData = [];
 
-    accessiRef.orderBy("timestamp", "desc").onSnapshot(snapshot => {
-      accessiData = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        accessiData.push({
-          timestamp: new Date(data.timestamp).toLocaleString("it-IT"),
-          userAgent: data.userAgent,
-          dispositivo: data.dispositivo || "N/D",
-          id: doc.id
+      accessiRef.orderBy("timestamp", "desc").onSnapshot(snapshot => {
+        accessiData = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          accessiData.push({
+            timestamp: new Date(data.timestamp).toLocaleString("it-IT"),
+            userAgent: data.userAgent,
+            dispositivo: data.dispositivo || "N/D",
+            id: doc.id
+          });
         });
+        renderList(accessiData);
       });
-      renderList(accessiData);
-    });
 
-    function renderList(data) {
-      const list = document.getElementById("accessList");
-      list.innerHTML = "";
-      data.forEach(item => {
-        const li = document.createElement("li");
-        li.innerHTML = `<strong>📅 ${item.timestamp}</strong><br>
-                        <em>🖥️ Dispositivo:</em> ${item.dispositivo}<br>
-                        <small>🌐 ${item.userAgent}</small>`;
-        list.appendChild(li);
-      });
-    }
-
-    function filterResults() {
-      const search = document.getElementById("searchBox").value.toLowerCase();
-      const filter = document.getElementById("deviceFilter").value;
-      const filtered = accessiData.filter(item =>
-        (item.userAgent.toLowerCase().includes(search) ||
-         item.timestamp.toLowerCase().includes(search)) &&
-        (filter === "" || item.dispositivo === filter)
-      );
-      renderList(filtered);
-    }
-
-    function esportaCSV() {
-      let csv = "timestamp,dispositivo,userAgent\n";
-      accessiData.forEach(item => {
-        csv += `"${item.timestamp}","${item.dispositivo}","${item.userAgent.replace(/"/g, "'')}"\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "accessi.csv";
-      a.click();
-    }
-
-    function cancellaTutti() {
-      if (confirm("Vuoi davvero cancellare tutti gli accessi?")) {
-        accessiData.forEach(item => {
-          accessiRef.doc(item.id).delete();
+      function renderList(data) {
+        const list = document.getElementById("accessList");
+        list.innerHTML = "";
+        data.forEach(item => {
+          const li = document.createElement("li");
+          li.innerHTML = `<strong>📅 ${item.timestamp}</strong><br>
+                          <em>🖥️ Dispositivo:</em> ${item.dispositivo}<br>
+                          <small>🌐 ${item.userAgent}</small>`;
+          list.appendChild(li);
         });
       }
-    }
+
+      function filterResults() {
+        const search = document.getElementById("searchBox").value.toLowerCase();
+        const filter = document.getElementById("deviceFilter").value;
+        const filtered = accessiData.filter(item =>
+          (item.userAgent.toLowerCase().includes(search) ||
+           item.timestamp.toLowerCase().includes(search)) &&
+          (filter === "" || item.dispositivo === filter)
+        );
+        renderList(filtered);
+      }
+
+      function esportaCSV() {
+        let csv = "timestamp,dispositivo,userAgent\n";
+        accessiData.forEach(item => {
+          csv += `"${item.timestamp}","${item.dispositivo}","${item.userAgent.replace(/"/g, "'")}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "accessi.csv";
+        a.click();
+      }
+
+      function cancellaTutti() {
+        if (confirm("Vuoi davvero cancellare tutti gli accessi?")) {
+          accessiData.forEach(item => {
+            accessiRef.doc(item.id).delete();
+          });
+        }
+      }
+
+      // Espongo le funzioni per l'HTML
+      window.filterResults = filterResults;
+      window.esportaCSV = esportaCSV;
+      window.cancellaTutti = cancellaTutti;
+    }).catch(err => {
+      console.error("Errore autenticazione anonima:", err);
+      document.getElementById("accessList").innerHTML = "<li>Errore autenticazione Firebase.</li>";
+    });
   </script>
 </body>
 </html>
