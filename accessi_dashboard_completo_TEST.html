@@ -2,58 +2,52 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>🔍 TEST Firebase Config</title>
   <style>
-    body { font-family: sans-serif; padding: 40px; }
-    #result { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 6px; }
-    .error { color: #e33; }
-    .success { color: #080; }
+    body { font-family:sans-serif; padding:40px; text-align:center; }
+    #result { margin-top:20px; padding:16px; border-radius:6px; }
+    .ok { background:#dfd; color:#060; }
+    .err { background:#fdd; color:#600; }
   </style>
 </head>
 <body>
-  <h1>🔍 TEST Firebase Config</h1>
-  <p>Verifica autenticazione anonima e lettura Firestore (documento <code>controllo/stato</code>)</p>
-  <div id="result">Inizializzazione in corso...</div>
+  <h1>⚙️ TEST Firebase Config</h1>
+  <div id="result">⏳ Avvio…</div>
 
-  <!-- SDK compatibili di Firebase -->
+  <!-- compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // --- CONFIGURAZIONE FIREBASE (copia da console Generali > Le tue app) ---
+    // **Copia ESATTAMENTE** la tua config da Firebase → Impostazioni progetto → Generali
     const firebaseConfig = {
-      apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      apiKey: "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
       projectId: "accesstracker-5d3f9",
       storageBucket: "accesstracker-5d3f9.appspot.com",
       messagingSenderId: "331964316032",
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
-    // ------------------------------------------------------------------------
-
-    // Inizializza
     firebase.initializeApp(firebaseConfig);
-    const resultEl = document.getElementById('result');
+    const result = document.getElementById('result');
 
-    // Login anonimo
+    // proviamo login anonimo e lettura doc di prova
     firebase.auth().signInAnonymously()
       .then(() => {
-        resultEl.innerHTML = '<span class="success">✔️ Autenticato anonimamente</span><br>Recupero documento...';
-        // Leggi doc controll o/stato
-        return firebase.firestore().collection('controllo').doc('stato').get();
+        return firebase.firestore()
+          .collection('controllo').doc('stato')
+          .get();
       })
       .then(doc => {
-        if (!doc.exists) {
-          resultEl.innerHTML += '<br><span class="error">⚠️ Documento <em>controllo/stato</em> non trovato</span>';
-        } else {
-          const data = doc.data();
-          resultEl.innerHTML += `<br><span class="success">✔️ Documento letto:</span><pre>${JSON.stringify(data, null, 2)}</pre>`;
-        }
+        const data = doc.exists ? JSON.stringify(doc.data()) : '— document non esiste —';
+        result.className = 'ok';
+        result.textContent = '✅ OK! Lettura riuscita: ' + data;
       })
       .catch(err => {
-        resultEl.innerHTML = `<span class="error">❌ Errore Firebase: ${err.code || err.message}</span>`;
+        result.className = 'err';
+        result.textContent = '❌ ERRORE: ' + err.code + ' — ' + err.message;
         console.error(err);
       });
   </script>
