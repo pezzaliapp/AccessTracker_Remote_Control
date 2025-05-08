@@ -1,57 +1,100 @@
-// → Inserisci qui la tua vera API Key dal pannello Generali → I tuoi app
+// --- CONFIG FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
+  apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
   authDomain: "accesstracker-5d3f9.firebaseapp.com",
   projectId: "accesstracker-5d3f9",
   storageBucket: "accesstracker-5d3f9.appspot.com",
   messagingSenderId: "331964316032",
   appId: "1:331964316032:web:8fcc4efdc180a40201a965"
 };
-
 firebase.initializeApp(firebaseConfig);
+// -------------------------
 
-// Funzione di debug in pagina
-function mostraMsg(txt, emoji="") {
-  const p = document.createElement("p");
-  p.textContent = `${emoji} ${txt}`;
-  p.style.margin = "8px 0";
-  document.body.appendChild(p);
+// Elementi UI
+const btn        = document.getElementById('toggleBtn');
+const elTime     = document.getElementById('currentTime');
+const elSince    = document.getElementById('connectedSince');
+const elLast     = document.getElementById('lastToggle');
+const elStandby  = document.getElementById('standbyTime');
+
+// Stato interno
+let lastToggleTime = null;
+let currentState   = null;
+const pageLoadTime = new Date();
+
+// Utility: ms → “HH:mm:ss”
+function msToHMS(ms) {
+  const s = Math.floor(ms/1000)%60;
+  const m = Math.floor(ms/60000)%60;
+  const h = Math.floor(ms/3600000);
+  return `${h}h ${m}m ${s}s`;
 }
 
-// Selettore bottone
-const btn = document.getElementById("toggleTracker");
-let statoAttuale = false;
+// Aggiorna orologio e timer
+function updateTimers() {
+  const now = new Date();
+  // ora corrente
+  elTime.textContent = `🕒 Ora: ${now.toLocaleTimeString()}`;
+  // connesso da
+  const connMs = now - pageLoadTime;
+  elSince.textContent = `📡 Connesso da: ${msToHMS(connMs)}`;
 
-mostraMsg("🕒 Inizializzo Firebase…");
+  if (lastToggleTime) {
+    elLast.textContent = `🔁 Ultima modifica: ${lastToggleTime.toLocaleString()}`;
+    // se disattivo, calcola standby da lastToggle
+    if (currentState === false) {
+      const offMs = now - lastToggleTime;
+      elStandby.textContent = `💤 Standby: ${msToHMS(offMs)}`;
+    } else {
+      elStandby.textContent = `💤 Standby: —`;
+    }
+  }
+}
 
-// Login anonimo
+// Autenticazione anonima e listener Firestore
 firebase.auth().signInAnonymously()
   .then(() => {
-    mostraMsg("🔐 Login anonimo OK");
     const db = firebase.firestore();
-    const ref = db.collection("controllo").doc("stato");
+    const statoRef = db.collection("controllo").doc("stato");
 
-    // Ascolta il documento in real-time
-    ref.onSnapshot(doc => {
+    // appena connessi, abilita il pulsante
+    btn.disabled = false;
+
+    // ascolto in real-time
+    statoRef.onSnapshot(doc => {
       if (!doc.exists) {
-        mostraMsg("⚠ Documento 'stato' non trovato");
-        btn.textContent = "⚠️ Errore";
+        console.warn("Doc 'stato' non trovato");
         return;
       }
-      statoAttuale = doc.data().attivo === true;
-      btn.textContent = statoAttuale ? "🛑 Disattiva Tracking" : "✅ Attiva Tracking";
-      mostraMsg("📡 Stato remoto = " + statoAttuale);
-    });
+      const newState = !!doc.data().attivo;
+      // se cambia lo stato, registro la data/ora
+      if (newState !== currentState) {
+        lastToggleTime = new Date();
+      }
+      currentState = newState;
 
-    // Al click del pulsante
-    btn.onclick = () => {
-      const nuovo = !statoAttuale;
-      ref.set({ attivo: nuovo })
-        .then(() => mostraMsg(`✍️ Impostato attivo = ${nuovo}`))
-        .catch(e => mostraMsg("❌ Errore update: " + e.message));
-    };
+      // aggiorno label del pulsante
+      btn.textContent = currentState
+        ? "🔴 Disattiva Tracking"
+        : "✅ Attiva Tracking";
+
+      // aggiorna subito i timer
+      updateTimers();
+    });
   })
   .catch(err => {
-    mostraMsg("❌ Errore login anonimo: " + err.code, "❌");
-    console.error(err);
+    console.error("Errore login anonimo:", err);
+    btn.textContent = "❌ Errore Firebase";
   });
+
+// click sul pulsante per cambiare stato
+btn.addEventListener('click', () => {
+  btn.disabled = true;
+  const db = firebase.firestore();
+  db.collection("controllo").doc("stato")
+    .set({ attivo: !currentState })
+    .finally(() => btn.disabled = false);
+});
+
+// aggiorna orologio e timer ogni secondo
+setInterval(updateTimers, 1000);
