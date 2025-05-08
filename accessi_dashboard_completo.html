@@ -31,11 +31,6 @@
       padding: 40px;
       transition: all .3s ease;
     }
-    #themeToggle {
-      position: fixed; top: 20px; right: 20px;
-      font-size: 24px; background: none; border: none; cursor: pointer;
-      color: inherit;
-    }
     h1 { margin-bottom: 0.2em; }
     .controls {
       margin: 20px 0;
@@ -63,6 +58,7 @@
     th, td {
       padding: 8px; border: 1px solid #ccc;
       font-size: 14px;
+      text-align: left;
     }
     #error {
       color: var(--error-red);
@@ -117,7 +113,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // dark/light theme
+    // Theme toggler
     const htmlTag = document.documentElement;
     const saved   = localStorage.getItem('theme');
     const darkQ   = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -131,9 +127,9 @@
         applyTheme(htmlTag.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
       });
 
-    // --- CONFIG FIREBASE CORRETTA ---
+    // Firebase config (copia esatto dalla Console Firebase)
     const firebaseConfig = {
-      apiKey: "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      apiKey: "AlzaSyCm9Ilf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
       projectId: "accesstracker-5d3f9",
       storageBucket: "accesstracker-5d3f9.appspot.com",
@@ -141,7 +137,6 @@
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
     firebase.initializeApp(firebaseConfig);
-    // ----------------------------------
 
     const auth       = firebase.auth();
     const db         = firebase.firestore();
@@ -175,7 +170,7 @@
       renderTable(filtered);
     }
 
-    // caricamento dati
+    // Carica i log
     spinner.style.display = 'inline-block';
     auth.signInAnonymously()
       .then(() => db.collection('accessi').orderBy('timestamp','desc').get())
@@ -186,31 +181,39 @@
       })
       .catch(e => {
         spinner.style.display = 'none';
-        errDiv.textContent = '❌ Errore autenticazione Firebase: ' + e.message;
+        errDiv.textContent = '❌ Errore Firebase: ' + e.message;
       });
 
-    // eventi UI
+    // UI events
     searchInp.addEventListener('input', filterAndRender);
     filterDev.addEventListener('change', filterAndRender);
 
     exportBtn.addEventListener('click', () => {
-      const rows = [
-        ['timestamp','dispositivo/userAgent'],
-        ...allLogs.map(l => [l.timestamp, l.dispositivo||l.userAgent])
-      ];
-      const csv   = rows.map(r =>
-        r.map(f => `"${(f||'').toString().replace(/"/g,'""')}"`).join(',')
-      ).join('\r\n');
-      const blob  = new Blob([csv], { type:'text/csv' });
-      const url   = URL.createObjectURL(blob);
-      const a     = document.createElement('a');
-      a.href = url; a.download = 'accessi.csv';
-      a.click();
-      URL.revokeObjectURL(url);
+      // Costruisci CSV con CRLF
+      const header = ['timestamp','dispositivo/userAgent'];
+      const rows = allLogs.map(l => [l.timestamp, l.dispositivo||l.userAgent]);
+      const csvContent = [header, ...rows]
+        .map(r => r.map(f => `"${(f||'').replace(/"/g,'""')}"`).join(','))
+        .join('\r\n');
+
+      const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+      if (navigator.msSaveBlob) {
+        navigator.msSaveBlob(blob, 'accessi.csv');
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'accessi.csv';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     });
 
     clearBtn.addEventListener('click', () => {
-      if(!confirm('Sicuro di voler cancellare tutti i log?')) return;
+      if (!confirm('Sicuro di voler cancellare tutti i log?')) return;
       spinner.style.display = 'inline-block';
       db.collection('accessi').get()
         .then(sn => Promise.all(sn.docs.map(d => d.ref.delete())))
@@ -220,8 +223,8 @@
           spinner.style.display = 'none';
         })
         .catch(e => {
-          errDiv.textContent = '❌ Errore cancellazione: ' + e.message;
           spinner.style.display = 'none';
+          errDiv.textContent = '❌ Errore cancellazione: ' + e.message;
         });
     });
   </script>
