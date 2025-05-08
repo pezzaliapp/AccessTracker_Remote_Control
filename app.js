@@ -7,51 +7,57 @@ const firebaseConfig = {
   appId: "1:331964316032:web:8fcc4efdc180a40201a965"
 };
 
+// Inizializza Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Mostra messaggi visivi
-function mostraMessaggio(msg, emoji = "") {
+// Funzione per visualizzare messaggi
+function mostraMessaggio(testo, emoji = "") {
   const p = document.createElement("p");
-  p.textContent = `${emoji} ${msg}`;
+  p.textContent = `${emoji} ${testo}`;
   p.style.fontSize = "18px";
-  p.style.marginTop = "20px";
+  p.style.marginTop = "12px";
   document.body.appendChild(p);
 }
 
-mostraMessaggio("🕒 Connessione a Firebase...");
+// Mostra messaggio iniziale
+mostraMessaggio("Connessione a Firebase...", "🕒");
 
+// Login anonimo
 firebase.auth().signInAnonymously()
   .then(() => {
-    mostraMessaggio("🔐 Accesso anonimo OK");
+    mostraMessaggio("Accesso anonimo riuscito", "🔐");
 
     const db = firebase.firestore();
     const statoRef = db.collection("controllo").doc("stato");
 
+    // Leggi lo stato in tempo reale
     statoRef.onSnapshot(doc => {
       if (!doc.exists) {
-        mostraMessaggio("⚠️ Documento 'stato' mancante");
+        mostraMessaggio("Documento 'stato' non trovato", "⚠️");
         return;
       }
 
-      const data = doc.data();
-      if (data.attivo === true) {
-        mostraMessaggio("🟢 Tracker attivo. Registrazione in corso...");
+      const stato = doc.data().attivo;
+
+      if (stato === true) {
+        mostraMessaggio("Tracker attivo. Registro accesso...", "🟢");
 
         db.collection("accessi").add({
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent
         }).then(() => {
-          mostraMessaggio("✅ Accesso registrato!");
+          mostraMessaggio("Accesso registrato!", "✅");
         }).catch(err => {
-          mostraMessaggio("❌ Errore scrittura su Firebase");
+          mostraMessaggio("Errore scrittura su Firebase", "❌");
           console.error(err);
         });
+
       } else {
-        mostraMessaggio("⛔ Tracker disattivato dal controller");
+        mostraMessaggio("Tracker disattivato dal controller", "⛔");
       }
     });
   })
   .catch(error => {
-    mostraMessaggio("❌ Errore accesso anonimo");
+    mostraMessaggio("Errore accesso anonimo", "❌");
     console.error(error);
   });
