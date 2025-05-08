@@ -1,73 +1,67 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AccessTracker – Tracker</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; padding: 40px; }
-    #log p { margin: 8px 0; font-family: monospace; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Access Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>body{font-family:sans-serif;text-align:center;padding:40px}</style>
 </head>
 <body>
-  <h1>📍 Access Tracker</h1>
-  <p>Controllo in corso…</p>
-  <div id="log"></div>
+  <h1>Access Tracker</h1>
+  <p id="msg">Attesa login…</p>
 
-  <!-- 1) Core SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <!-- 2) Auth compat -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <!-- 3) Firestore compat -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- form di login -->
+  <form id="loginForm" style="margin:20px auto;max-width:300px">
+    <input  type="email"    id="email"    placeholder="e-mail" value="tuo@email.it" required><br>
+    <input  type="password" id="password" placeholder="password"           required><br>
+    <button type="submit">Accedi</button>
+  </form>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // → Sostituisci qui con la tua API key ESATTA da Impostazioni → Generali → I tuoi app
+    /* Config Firebase */
     const firebaseConfig = {
-      apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
-      authDomain: "accesstracker-5d3f9.firebaseapp.com",
-      projectId: "accesstracker-5d3f9",
-      storageBucket: "accesstracker-5d3f9.appspot.com",
-      messagingSenderId: "331964316032",
-      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
+      apiKey:"AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      authDomain:"accesstracker-5d3f9.firebaseapp.com",
+      projectId:"accesstracker-5d3f9"
     };
     firebase.initializeApp(firebaseConfig);
 
-    function log(txt, emoji="") {
-      const p = document.createElement("p");
-      p.textContent = emoji + " " + txt;
-      document.getElementById("log").appendChild(p);
-      console.log(txt);
-    }
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+    const msg  = document.getElementById('msg');
+    const form = document.getElementById('loginForm');
 
-    log("Inizializzo Firebase…", "🕒");
-    firebase.auth().signInAnonymously()
-      .then(() => {
-        log("Login anonimo OK", "🔐");
-        const db = firebase.firestore();
-        const ref = db.collection("controllo").doc("stato");
+    /* login manuale */
+    form.addEventListener('submit', e=>{
+      e.preventDefault();
+      auth.signInWithEmailAndPassword(form.email.value.trim(), form.password.value)
+          .catch(err=>alert('Login fallito: '+err.message));
+    });
 
-        ref.onSnapshot(doc => {
-          if (!doc.exists) {
-            log("Documento 'controllo/stato' non trovato", "⚠️");
-            return;
-          }
-          const att = doc.data().attivo;
-          log("Stato remoto = " + att, "📡");
-          if (att) {
-            log("Tracker attivo: registro accesso…", "🟢");
-            db.collection("accessi").add({
-              timestamp: new Date().toISOString(),
-              userAgent: navigator.userAgent
-            })
-            .then(() => log("Accesso registrato", "✅"))
-            .catch(e => log("Errore scrittura accessi", "❌"));
-          } else {
-            log("Tracker disattivato", "⏸");
-          }
-        });
-      })
-      .catch(e => log("Errore login anonimo: " + e.code, "❌"));
+    /* quando loggato, avvia tracker */
+    auth.onAuthStateChanged(user=>{
+      if(!user){msg.textContent='Attesa login…';return;}
+      form.style.display='none';
+      msg.textContent='🔄 Controllo in corso…';
+
+      db.collection('controllo').doc('stato').get().then(doc=>{
+        if(doc.exists && doc.data().attivo){
+          db.collection('accessi').add({
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+          }).then(()=>msg.textContent='✅ Accesso registrato.')
+            .catch(e=>msg.textContent='❌ Errore scrittura: '+e.message);
+        }else{
+          msg.textContent='⛔ Tracker disattivato da remoto.';
+        }
+      });
+    });
   </script>
 </body>
 </html>
