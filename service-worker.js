@@ -1,37 +1,61 @@
-// service-worker.js
-const CACHE_NAME = "accesstracker-pwa-v2";
+/* service-worker.js — v3 */
+const CACHE_VERSION = 'v3';                // <--  cambialo ad ogni release
+const CACHE_NAME    = `accesstracker-${CACHE_VERSION}`;
 
-// Quando si installa il SW, svuota la vecchia cache e crea la nuova
-self.addEventListener("install", event => {
-  console.log("Service Worker installato (v2)");
-  event.waitUntil(
-    caches.keys().then(keyList => {
-      return Promise.all(
-        keyList.map(key => {
-          // Elimina tutte le cache che non corrispondono al nuovo CACHE_NAME
-          if (key !== CACHE_NAME) {
-            console.log("Elimino cache obsoleta:", key);
-            return caches.delete(key);
-          }
-        })
-      );
-    })
+// elenco (essenziale) di file da mantenere off-line;
+const STATIC_ASSETS = [
+  '/',                     // index.html
+  '/manifest.json',
+  '/icon/accesstracker-icon-192.png',
+  '/tracker.html',
+  '/controller.html',
+  '/accessi_dashboard_completo.html',
+  '/accessi_grafici_completo.html',
+  '/css/style.css',        // se usi un foglio di stile separato
+  '/js/controller.js',     // se hai file JS esterni
+];
+
+self.addEventListener('install', evt => {
+  console.log('[SW]', CACHE_VERSION, 'install');
+  evt.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
+  self.skipWaiting();                       // attiva subito v3
 });
 
-// Intercetta le richieste e (per esempio) le passa direttamente alla rete
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      // Se vuoi gestire l'offline, puoi restituire un fallback da cache
-      // return caches.match(event.request);
-    })
+self.addEventListener('activate', evt => {
+  console.log('[SW]', CACHE_VERSION, 'activate');
+  evt.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys
+        .filter(k => k.startsWith('accesstracker-') && k !== CACHE_NAME)
+        .map(k => caches.delete(k))
+    ))
   );
+  self.clients.claim();                     // controlla subito le pagine aperte
 });
 
-self.addEventListener("activate", event => {
-  // Consente al SW di prendere subito controllo
-  event.waitUntil(self.clients.claim());
-  console.log("Service Worker attivato (v2)");
+/* NETWORK-FIRST per i tuoi HTML / JS  */
+/* CACHE-FIRST per le icone / manifest  */
+self.addEventListener('fetch', evt => {
+  const { request } = evt;
+  const url = new URL(request.url);
+
+  // Non toccare le chiamate a Firebase: lasciale andare in rete!
+  if (url.hostname.endsWith('firebaseio.com') ||
+      url.hostname.endsWith('googleapis.com')) {
+    return;                                 // niente respondWith → default fetch
+  }
+
+  if (STATIC_ASSETS.includes(url.pathname)) {
+    // risorsa statica: prova cache, poi rete
+    evt.respondWith(
+      caches.match(request).then(resp => resp || fetch(request))
+    );
+  } else {
+    // qualunque altra cosa: rete -> fallback cache se offline
+    evt.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+  }
 });
