@@ -88,41 +88,49 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import {{ initializeApp }} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import {{ getFirestore, doc, getDoc, setDoc }} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import {{ getAuth, signInAnonymously }} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCm91If2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
+    const firebaseConfig = {{
+      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
       projectId: "accesstracker-5d3f9",
       storageBucket: "accesstracker-5d3f9.appspot.com",
       messagingSenderId: "331964316032",
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-    };
+    }};
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const docRef = doc(db, "controllo", "stato");
-    const toggleBtn = document.getElementById("toggleTracker");
+    const auth = getAuth();
 
-    async function aggiornaStato() {
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const attivo = docSnap.data().attivo;
+    const toggleBtn = document.getElementById("toggleTracker");
+    const docRef = doc(db, "controllo", "stato");
+
+    signInAnonymously(auth).then(() => {{
+      aggiornaStato();
+
+      toggleBtn.onclick = async () => {{
+        const nuovoStato = toggleBtn.dataset.attivo === "true" ? false : true;
+        await setDoc(docRef, {{ attivo: nuovoStato }});
+        aggiornaStato();
+      }};
+    }}).catch(err => {{
+      toggleBtn.textContent = "⚠️ Errore autenticazione";
+      console.error(err);
+    }});
+
+    async function aggiornaStato() {{
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {{
+        const attivo = snap.data().attivo;
         toggleBtn.textContent = attivo ? "🛑 Disattiva Tracking" : "✅ Attiva Tracking";
         toggleBtn.dataset.attivo = attivo;
-      } else {
+      }} else {{
         toggleBtn.textContent = "⚠️ Documento non trovato";
-      }
-    }
-
-    toggleBtn.onclick = async () => {
-      const nuovoStato = toggleBtn.dataset.attivo === "true" ? false : true;
-      await setDoc(docRef, { attivo: nuovoStato });
-      aggiornaStato();
-    };
-
-    aggiornaStato();
+      }}
+    }}
   </script>
 
   <script>
@@ -130,21 +138,21 @@
     const savedTheme = localStorage.getItem('theme');
     const htmlTag = document.documentElement;
 
-    function applyTheme(theme) {
+    function applyTheme(theme) {{
       htmlTag.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
-    }
+    }}
 
-    if (savedTheme) {
+    if (savedTheme) {{
       applyTheme(savedTheme);
-    } else {
+    }} else {{
       applyTheme(systemPrefersDark ? 'dark' : 'light');
-    }
+    }}
 
-    document.getElementById('themeToggle').addEventListener('click', () => {
+    document.getElementById('themeToggle').addEventListener('click', () => {{
       const current = htmlTag.getAttribute('data-theme');
       applyTheme(current === 'dark' ? 'light' : 'dark');
-    });
+    }});
   </script>
 </body>
 </html>
