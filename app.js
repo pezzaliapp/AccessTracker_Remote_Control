@@ -8,17 +8,25 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
-db.collection("controllo").doc("stato").get().then(doc => {
-  if (doc.exists && doc.data().attivo) {
-    db.collection("accessi").add({
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
-    }).then(() => {
-      console.log("Accesso registrato.");
+// 🔐 Login anonimo prima di qualsiasi operazione
+firebase.auth().signInAnonymously()
+  .then(() => {
+    const db = firebase.firestore();
+
+    db.collection("controllo").doc("stato").get().then(doc => {
+      if (doc.exists && doc.data().attivo) {
+        db.collection("accessi").add({
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent
+        }).then(() => {
+          console.log("✅ Accesso registrato.");
+        });
+      } else {
+        console.log("ℹ️ Tracker disattivato da remoto.");
+      }
     });
-  } else {
-    console.log("Tracker disattivato da remoto.");
-  }
-});
+  })
+  .catch((error) => {
+    console.error("❌ Errore autenticazione anonima:", error);
+  });
