@@ -8,20 +8,26 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
-const dispositivo = "WinAziendale";
+firebase.auth().signInAnonymously()
+  .then(() => {
+    const db = firebase.firestore();
+    const dispositivo = "WinAziendale";
 
-db.collection("controllo").doc("stato").get().then(doc => {
-  if (doc.exists && doc.data().attivo) {
-    db.collection("accessi").add({
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      dispositivo: dispositivo
-    }).then(() => {
-      console.log("Accesso registrato da " + dispositivo);
+    db.collection("controllo").doc("stato").get().then(doc => {
+      if (doc.exists && doc.data().attivo) {
+        db.collection("accessi").add({
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          dispositivo: dispositivo
+        }).then(() => {
+          console.log("✅ Accesso registrato da " + dispositivo);
+        });
+      } else {
+        console.log("ℹ️ Tracker disattivato da remoto.");
+      }
     });
-  } else {
-    console.log("Tracker disattivato da remoto.");
-  }
-});
+  })
+  .catch((error) => {
+    console.error("❌ Errore autenticazione anonima:", error);
+  });
