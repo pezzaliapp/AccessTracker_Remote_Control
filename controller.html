@@ -51,13 +51,14 @@
     <p id="standbyTime">💤 Standby: –</p>
   </div>
 
-  <!-- Firebase compat SDK -->
+  <!-- 1) compat SDK:
+       https://firebase.google.com/docs/web/learn-more#modules_and_namespaces -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
   <script>
-    // --- CONFIG FIREBASE ---
+    // ——— Controlla di aver copiato esattamente questa API‐KEY dalla console Firebase → Impostazioni Generali ———
     const firebaseConfig = {
       apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
@@ -67,92 +68,78 @@
       appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
     firebase.initializeApp(firebaseConfig);
-    // -------------------------
 
-    // Elementi UI
-    const btn        = document.getElementById('toggleBtn');
-    const elTime     = document.getElementById('currentTime');
-    const elSince    = document.getElementById('connectedSince');
-    const elLast     = document.getElementById('lastToggle');
-    const elStandby  = document.getElementById('standbyTime');
+    const btn       = document.getElementById('toggleBtn');
+    const elTime    = document.getElementById('currentTime');
+    const elSince   = document.getElementById('connectedSince');
+    const elLast    = document.getElementById('lastToggle');
+    const elStandby = document.getElementById('standbyTime');
 
-    // Stato interno
     let lastToggleTime = null;
     let currentState   = null;
-    const pageLoadTime = new Date();
+    const startTime    = new Date();
 
-    // Utility: ms → “Hh Mm Ss”
     function msToHMS(ms) {
-      const s = Math.floor(ms/1000)%60;
-      const m = Math.floor(ms/60000)%60;
+      const s = Math.floor(ms/1000) % 60;
+      const m = Math.floor(ms/60000) % 60;
       const h = Math.floor(ms/3600000);
       return `${h}h ${m}m ${s}s`;
     }
 
-    // Aggiorna orologio e timer
-    function updateTimers() {
+    function updateInfo() {
       const now = new Date();
       elTime.textContent  = `🕒 Ora: ${now.toLocaleTimeString()}`;
-      const connMs = now - pageLoadTime;
-      elSince.textContent = `📡 Connesso da: ${msToHMS(connMs)}`;
-
+      elSince.textContent = `📡 Connesso da: ${msToHMS(now - startTime)}`;
       if (lastToggleTime) {
         elLast.textContent = `🔁 Ultima modifica: ${lastToggleTime.toLocaleString()}`;
-        if (currentState === false) {
-          const offMs = now - lastToggleTime;
-          elStandby.textContent = `💤 Standby: ${msToHMS(offMs)}`;
+        if (!currentState) {
+          elStandby.textContent = `💤 Standby: ${msToHMS(now - lastToggleTime)}`;
         } else {
-          elStandby.textContent = `💤 Standby: —`;
+          elStandby.textContent = `💤 Standby: –`;
         }
       }
     }
 
-    // Login anonimo + snapshot listener
     firebase.auth().signInAnonymously()
       .then(() => {
         const db = firebase.firestore();
-        const statoRef = db.collection("controllo").doc("stato");
-
+        const ref = db.collection("controllo").doc("stato");
         btn.disabled = false;
-
-        statoRef.onSnapshot(doc => {
+        // ascolta i cambi di stato in tempo reale
+        ref.onSnapshot(doc => {
           if (!doc.exists) return;
           const newState = !!doc.data().attivo;
-          if (newState !== currentState) {
-            lastToggleTime = new Date();
-          }
+          if (newState !== currentState) lastToggleTime = new Date();
           currentState = newState;
-
           btn.textContent = currentState
             ? "🔴 Disattiva Tracking"
             : "✅ Attiva Tracking";
-
-          updateTimers();
+          updateInfo();
         });
       })
       .catch(err => {
-        console.error("❌ Errore login anonimo:", err);
+        console.error(err);
+        btn.disabled = true;
         btn.textContent = "❌ Errore Firebase";
       });
 
-    // Clic sul pulsante → toggle remoto
     btn.addEventListener('click', () => {
       btn.disabled = true;
-      const db = firebase.firestore();
-      db.collection("controllo").doc("stato")
+      firebase.firestore().collection("controllo").doc("stato")
         .set({ attivo: !currentState })
         .finally(() => btn.disabled = false);
     });
 
-    // Refresh timer ogni secondo
-    setInterval(updateTimers, 1000);
+    // aggiorna orologio e standby ogni secondo
+    setInterval(updateInfo, 1000);
 
-    // Tema (light/dark)
-    (function(){
+    // tema light/dark
+    (()=>{
       const htmlTag = document.documentElement;
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const saved = localStorage.getItem('theme');
-      htmlTag.setAttribute('data-theme', saved|| (systemDark?'dark':'light'));
+      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      htmlTag.setAttribute('data-theme',
+        localStorage.getItem('theme') || (sys ? 'dark' : 'light')
+      );
     })();
   </script>
 </body>
