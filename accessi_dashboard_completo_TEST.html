@@ -1,70 +1,61 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="light">
+<html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🔍 TEST Firebase Config</title>
   <style>
-    body { font-family:sans-serif; padding:30px; }
-    .box { padding:20px; border:1px solid #ccc; border-radius:6px; margin-top:20px; }
-    .ok { background:#e0ffe0; color:#060; }
-    .err { background:#ffe0e0; color:#600; }
+    body { font-family: sans-serif; padding: 40px; }
+    #result { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 6px; }
+    .error { color: #e33; }
+    .success { color: #080; }
   </style>
 </head>
 <body>
-  <h1>🔎 TEST Firebase Config</h1>
-  <p>Verifica autenticazione anonima e lettura Firestore (1 doc)</p>
-  <div id="result" class="box">⏳ Inizio test…</div>
+  <h1>🔍 TEST Firebase Config</h1>
+  <p>Verifica autenticazione anonima e lettura Firestore (documento <code>controllo/stato</code>)</p>
+  <div id="result">Inizializzazione in corso...</div>
 
-  <!-- compat SDK -->
+  <!-- SDK compatibili di Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-  (async()=>{
-    const res = document.getElementById('result');
-
-    // ⚠️ COPIA ESATTAMENTE DAL CONSOLE FIREBASE → Impostazioni → Generali
+    // --- CONFIGURAZIONE FIREBASE (copia da console Generali > Le tue app) ---
     const firebaseConfig = {
-      apiKey:       "AIzaSyCm9lIf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",
-      authDomain:   "accesstracker-5d3f9.firebaseapp.com",
-      projectId:    "accesstracker-5d3f9",
-      storageBucket:"accesstracker-5d3f9.appspot.com",
-      messagingSenderId:"331964316032",
-      appId:        "1:331964316032:web:8fcc4efdc180a40201a965"
+      apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
+      authDomain: "accesstracker-5d3f9.firebaseapp.com",
+      projectId: "accesstracker-5d3f9",
+      storageBucket: "accesstracker-5d3f9.appspot.com",
+      messagingSenderId: "331964316032",
+      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
     };
+    // ------------------------------------------------------------------------
 
     // Inizializza
-    try {
-      firebase.initializeApp(firebaseConfig);
-    } catch(e) {
-      return res.className='box err', res.textContent = '❌ initializeApp: '+e.message;
-    }
+    firebase.initializeApp(firebaseConfig);
+    const resultEl = document.getElementById('result');
 
     // Login anonimo
-    try {
-      res.textContent = '⏳ signInAnonymously…';
-      await firebase.auth().signInAnonymously();
-      res.textContent = '⏳ Auth OK, leggo 1 doc da accessi…';
-    } catch(e) {
-      return res.className='box err',
-             res.textContent = '❌ Auth failed: ('+e.code+') '+e.message;
-    }
-
-    // Lettura Firestore
-    try {
-      const snap = await firebase.firestore()
-        .collection('accessi')
-        .limit(1)
-        .get();
-      res.className = 'box ok';
-      res.textContent = `✅ Firestore OK: trovati ${snap.size} doc`;
-    } catch(e) {
-      res.className = 'box err';
-      res.textContent = '❌ Firestore read failed: ('+e.code+') '+e.message;
-    }
-  })();
+    firebase.auth().signInAnonymously()
+      .then(() => {
+        resultEl.innerHTML = '<span class="success">✔️ Autenticato anonimamente</span><br>Recupero documento...';
+        // Leggi doc controll o/stato
+        return firebase.firestore().collection('controllo').doc('stato').get();
+      })
+      .then(doc => {
+        if (!doc.exists) {
+          resultEl.innerHTML += '<br><span class="error">⚠️ Documento <em>controllo/stato</em> non trovato</span>';
+        } else {
+          const data = doc.data();
+          resultEl.innerHTML += `<br><span class="success">✔️ Documento letto:</span><pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      })
+      .catch(err => {
+        resultEl.innerHTML = `<span class="error">❌ Errore Firebase: ${err.code || err.message}</span>`;
+        console.error(err);
+      });
   </script>
 </body>
 </html>
