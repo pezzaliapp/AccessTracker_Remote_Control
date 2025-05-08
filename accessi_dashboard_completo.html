@@ -127,15 +127,17 @@
       .addEventListener('click', ()=> apply(htmlTag.getAttribute('data-theme')==='dark'?'light':'dark'));
 
     // config Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyCm9I1f2I8FQHiIUoSbtOmLRQNxtgCJd60",
-      authDomain: "accesstracker-5d3f9.firebaseapp.com",
-      projectId: "accesstracker-5d3f9",
-      storageBucket: "accesstracker-5d3f9.appspot.com",
-      messagingSenderId: "331964316032",
-      appId: "1:331964316032:web:8fcc4efdc180a40201a965"
-    };
-    firebase.initializeApp(firebaseConfig);
+    // ------------------ CON QUESTO ------------------
+const firebaseConfig = {
+  apiKey: "AlzaSyCm9Ilf2I8FQHiIUoSbtOmLRQNxtgCJd6Q",      // ← la tua vera chiave API web, quella in "Impostazioni progetto > Generali"
+  authDomain: "accesstracker-5d3f9.firebaseapp.com",
+  projectId: "accesstracker-5d3f9",
+  storageBucket: "accesstracker-5d3f9.appspot.com",        // ← correggi anche questo
+  messagingSenderId: "331964316032",
+  appId: "1:331964316032:web:8fcc4efdc180a40201a965"
+};
+firebase.initializeApp(firebaseConfig);
+// ---------------------------------------------------------
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
