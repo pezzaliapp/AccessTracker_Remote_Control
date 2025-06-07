@@ -14,15 +14,12 @@
   <p>Controllo in corso…</p>
   <div id="log"></div>
 
-  <!-- 1) Core SDK -->
+  <!-- Firebase SDK compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <!-- 2) Auth compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <!-- 3) Firestore compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // → Sostituisci qui con la tua API key ESATTA da Impostazioni → Generali → I tuoi app
     const firebaseConfig = {
       apiKey: "AIzaSyCm9lIf2l8FQHiIUoSbtOmLRQNxtgCJd6Q",
       authDomain: "accesstracker-5d3f9.firebaseapp.com",
@@ -41,12 +38,14 @@
     }
 
     log("Inizializzo Firebase…", "🕒");
+
     firebase.auth().signInAnonymously()
       .then(() => {
         log("Login anonimo OK", "🔐");
         const db = firebase.firestore();
-        const ref = db.collection("controllo").doc("stato");
 
+        // 🔄 Tracciamento remoto via "controllo/stato"
+        const ref = db.collection("controllo").doc("stato");
         ref.onSnapshot(doc => {
           if (!doc.exists) {
             log("Documento 'controllo/stato' non trovato", "⚠️");
@@ -66,6 +65,19 @@
             log("Tracker disattivato", "⏸");
           }
         });
+
+        // 🚨 Ascolta in tempo reale nuovi HID alert
+        db.collection("alert")
+          .orderBy("timestamp", "desc")
+          .limit(1)
+          .onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+              if (change.type === "added") {
+                const d = change.doc.data();
+                log(`⚠️ HID Alert da ${d.dispositivo || "sconosciuto"} alle ${d.timestamp}`, "🚨");
+              }
+            });
+          });
       })
       .catch(e => log("Errore login anonimo: " + e.code, "❌"));
   </script>
