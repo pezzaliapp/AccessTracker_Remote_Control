@@ -1,8 +1,3 @@
-Perfetto, ecco il file README.md già pronto da copiare e incollare così com’è nella root della repository:
-
-⸻
-
-
 # 🛡️ AccessTracker – Remote Control PWA
 
 **AccessTracker** è una **Progressive Web App (PWA)** con un sistema di monitoraggio etico per:
