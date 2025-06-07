@@ -19,7 +19,7 @@ db = firestore.client()
 tasti_premuti = []
 
 def invia_alert(n_tasti, velocita):
-    timestamp = datetime.utcnow().isoformat()
+    timestamp = datetime.now().isoformat()  # usa orario locale
     alert = {
         "tipo": "velocità_digitazione",
         "timestamp": timestamp,
