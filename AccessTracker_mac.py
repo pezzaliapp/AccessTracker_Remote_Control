@@ -1,58 +1,45 @@
 import time
-import subprocess
 from datetime import datetime
+from pynput import keyboard
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# === CONFIGURAZIONE FIREBASE ===
+# === CONFIG ===
 CRED_FILE = "firebase_key.json"
 DISPOSITIVO = "MacPrivato"
+SOGLIA_TASTI_AL_SECONDO = 10
+FINESTRA_SECONDI = 1
 
-# === INIZIALIZZA FIREBASE ===
+# === FIREBASE ===
 cred = credentials.Certificate(CRED_FILE)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# === OTTIENI LISTA TASTIERE ATTUALI ===
-def get_current_keyboards():
-    try:
-        result = subprocess.check_output(["ioreg", "-p", "IOUSB", "-w0", "-l"], text=True)
-        lines = result.splitlines()
-        keyboards = []
-        for line in lines:
-            if any(key in line.lower() for key in ["keyboard", "hid"]):
-                keyboards.append(line.strip())
-        return keyboards
-    except Exception as e:
-        print(f"[Errore] ioreg fallito: {e}")
-        return []
+# === STATO DIGITAZIONE ===
+tasti_premuti = []
 
-# === INVIA ALERT FIREBASE ===
-def invia_alert(riga_identificativa):
+def invia_alert(n_tasti, velocita):
     timestamp = datetime.utcnow().isoformat()
     alert = {
-        "tipo": "hid_alert",
+        "tipo": "velocità_digitazione",
         "timestamp": timestamp,
         "dispositivo": DISPOSITIVO,
-        "descrizione": riga_identificativa
+        "descrizione": f"{n_tasti} tasti in {FINESTRA_SECONDI}s – {velocita:.1f} tasti/sec"
     }
     db.collection("alert").add(alert)
-    print(f"[🚨] HID sospetto rilevato!
-[✅] Alert inviato alle {timestamp}\n -> {riga_identificativa}")
+    print(f"[🚨] Digitazione sospetta! {n_tasti} tasti in {FINESTRA_SECONDI}s – Alert inviato.")
 
-# === LOOP PRINCIPALE ===
-print("🛡️ Monitoraggio in corso (nuove tastiere USB HID)… Ctrl+C per uscire.")
-precedenti = get_current_keyboards()
+def on_press(key):
+    t = time.time()
+    tasti_premuti.append(t)
+    # rimuovi eventi più vecchi della finestra temporale
+    while tasti_premuti and t - tasti_premuti[0] > FINESTRA_SECONDI:
+        tasti_premuti.pop(0)
 
-try:
-    while True:
-        attuali = get_current_keyboards()
-        nuovi = [k for k in attuali if k not in precedenti]
-        if nuovi:
-            for k in nuovi:
-                invia_alert(k)
-        precedenti = attuali
-        time.sleep(5)
+    if len(tasti_premuti) > SOGLIA_TASTI_AL_SECONDO:
+        invia_alert(len(tasti_premuti), len(tasti_premuti)/FINESTRA_SECONDI)
+        tasti_premuti.clear()
 
-except KeyboardInterrupt:
-    print("🛑 Monitoraggio interrotto.")
+print("⌨️ Monitoraggio velocità digitazione attivo. Ctrl+C per uscire.")
+with keyboard.Listener(on_press=on_press) as listener:
+    listener.join()
