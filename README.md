@@ -14,15 +14,15 @@
 
 ## 🚀 Funzionalità principali
 
-| Pagina                          | Funzione                           | Descrizione                                                              |
-| ------------------------------ | ---------------------------------- | ------------------------------------------------------------------------ |
-| `index.html`                   | Homepage                           | Selettore tema, accesso rapido alle sezioni                             |
-| `tracker.html`                 | Rilevamento accessi                | Rileva accessi se attivo, registra userAgent e timestamp                 |
-| `controller.html`              | Controllo remoto                   | Attiva/disattiva il tracciamento, cronometro di sessione                |
-| `accessi_dashboard_completo.html` | Log completo + CSV               | Lista filtrabile, esportazione `accessi.csv`, timestamp in italiano     |
-| `accessi_grafici_completo.html`   | Grafici in tempo reale           | Dashboard Firestore live: giornalieri e per dispositivo                 |
-| `AccessTracker_mac.py`         | Script anti-RubberDucky (macOS)    | Headless, eseguito da Terminale, log su file, alert su Firebase         |
-| `AccessTracker_win.py`         | Script anti-RubberDucky (Windows)  | (in sviluppo, compatibile con la versione macOS)                         |
+| Pagina                             | Funzione                            | Descrizione                                                              |
+|-----------------------------------|-------------------------------------|---------------------------------------------------------------------------|
+| `index.html`                      | Homepage                            | Selettore tema, accesso rapido alle sezioni                              |
+| `tracker.html`                    | Rilevamento accessi                 | Rileva accessi se attivo, registra userAgent e timestamp                 |
+| `controller.html`                 | Controllo remoto                    | Attiva/disattiva il tracciamento, cronometro di sessione                |
+| `accessi_dashboard_completo.html` | Log completo + CSV                  | Lista filtrabile, esportazione CSV, timestamp localizzato               |
+| `accessi_grafici_completo.html`   | Grafici in tempo reale              | Dashboard da Firestore live                                              |
+| `AccessTracker_mac.py`            | Script anti-RubberDucky (macOS)     | Headless, log su file, invio alert a Firebase                           |
+| `AccessTracker_win.py`            | Script anti-RubberDucky (Windows)   | (in sviluppo)                                                            |
 
 ---
 
@@ -38,16 +38,16 @@
 
 ### 1. Requisiti Firebase
 
-- Progetto Firebase (Spark gratuito)
-- Firestore abilitato
-- Autenticazione anonima abilitata
-- Dominî autorizzati:
+- ✅ Progetto Firebase (Spark gratuito)
+- ✅ Firestore abilitato
+- ✅ Autenticazione anonima abilitata
+- ✅ Dominî autorizzati:
   - `localhost`
   - il tuo dominio (es: `www.alessandropezzali.it`)
 
 ### 2. Configurazione Firebase
 
-Sostituisci le chiavi `firebaseConfig` in **tutti** i file `.html` e nei file JS:
+Sostituisci le chiavi `firebaseConfig` in **tutti** i file `.html` e nei file `.js`:
 
 ```js
 const firebaseConfig = {
@@ -55,12 +55,14 @@ const firebaseConfig = {
   authDomain: "TUO_PROJECT_ID.firebaseapp.com",
   projectId: "TUO_PROJECT_ID",
   storageBucket: "TUO_PROJECT_ID.appspot.com",
-  messagingSenderId: "...",
-  appId: "..."
+  messagingSenderId: "....",
+  appId: "...."
 };
+```
 
-3. Regole Firestore di base
+### 3. Regole Firestore di base
 
+```js
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -69,13 +71,15 @@ service cloud.firestore {
     }
   }
 }
+```
 
 📌 In produzione, imposta regole più restrittive.
 
-⸻
+---
 
-💻 Esecuzione in locale
+## 💻 Esecuzione in locale
 
+```bash
 git clone https://github.com/<tuo-user>/AccessTracker_Remote_Control.git
 cd AccessTracker_Remote_Control
 
@@ -85,28 +89,32 @@ serve -l 5500
 
 # Oppure con Python
 python3 -m http.server 5500
+```
 
-Apri nel browser:
-📍 http://localhost:5500/index.html
+Apri nel browser:  
+📍 [http://localhost:5500/index.html](http://localhost:5500/index.html)
 
-⸻
+---
 
-🧪 Script anti-attacco (macOS)
+## 🧪 Script anti-attacco (macOS)
 
-Esegui il file headless AccessTracker_mac.py:
+Esegui il file headless `AccessTracker_mac.py`:
 
+```bash
 python3 AccessTracker_mac.py
+```
 
-✔️ Controlla ogni 5 secondi se la tastiera è attiva
-📄 Scrive un log locale access_tracker_log.txt
-📡 Invia l’evento al nodo accessi di Firestore
+✔️ Controlla ogni 5 secondi se la tastiera è attiva  
+📄 Scrive un log locale `access_tracker_log.txt`  
+📡 Invia l’evento al nodo `accessi` di Firestore
 
-🔜 La versione AccessTracker_win.py per Windows sarà disponibile a breve.
+> 🔜 La versione `AccessTracker_win.py` per Windows sarà disponibile a breve.
 
-⸻
+---
 
-📦 Struttura della repository
+## 📦 Struttura della repository
 
+```plaintext
 AccessTracker_Remote_Control/
 ├── index.html
 ├── tracker.html
@@ -123,34 +131,33 @@ AccessTracker_Remote_Control/
 └── js/
     ├── controller.js
     └── tracker.js
-
-
-⸻
-
-📊 Esporta CSV in formato locale
-
-Dalla dashboard accessi_dashboard_completo.html puoi esportare un file CSV compatibile con Excel. Il campo timestamp è già formattato con toLocaleString('it-IT').
-
-⸻
-
-🔁 Aggiorna cache PWA
-
-Modifica il nome della cache nel file service-worker.js quando aggiorni asset critici:
-
-const CACHE_NAME = 'accesstracker-v3';
-
-
-⸻
-
-📄 Licenza
-
-Distribuito con licenza MIT.
-Vedi file LICENSE per tutti i dettagli.
-
-⸻
-
-✉️ Contatti o supporto:
-	•	www.pezzaliapp.com
-	•	GitHub Issues
+```
 
 ---
+
+## 📊 Esporta CSV in formato locale
+
+Puoi esportare il file `accessi.csv` dalla dashboard. I timestamp sono già formattati in italiano (`toLocaleString('it-IT')`).
+
+---
+
+## 🔁 Aggiorna cache PWA
+
+Quando aggiorni asset critici, modifica il nome della cache in `service-worker.js`:
+
+```js
+const CACHE_NAME = 'accesstracker-v3';
+```
+
+---
+
+## 📄 Licenza
+
+Distribuito con licenza **MIT**.  
+Consulta il file `LICENSE` per i dettagli.
+
+---
+
+✉️ Per assistenza:
+- [www.pezzaliapp.com](https://www.pezzaliapp.com)
+- [GitHub Issues](https://github.com/pezzaliapp/AccessTracker_Remote_Control/issues)
