@@ -1,45 +1,58 @@
-
-import pynput.keyboard
 import time
-import threading
+import subprocess
 from datetime import datetime
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-LOG_FILE = "access_log_2025-06-07.log"
-CHECK_INTERVAL = 5  # secondi
-SPEED_THRESHOLD = 30  # tasti per secondo considerati sospetti
+# === CONFIGURAZIONE FIREBASE ===
+CRED_FILE = "firebase_key.json"
+DISPOSITIVO = "MacPrivato"
 
-buffer = []
-lock = threading.Lock()
+# === INIZIALIZZA FIREBASE ===
+cred = credentials.Certificate(CRED_FILE)
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
-def write_log(event, status="OK"):
-    with open(LOG_FILE, "a") as f:
-        timestamp = datetime.now().isoformat()
-        f.write(f"{'timestamp': '{}', 'event': '{}', 'status': '{}'}\n".format(timestamp, event, status))
+# === OTTIENI LISTA TASTIERE ATTUALI ===
+def get_current_keyboards():
+    try:
+        result = subprocess.check_output(["ioreg", "-p", "IOUSB", "-w0", "-l"], text=True)
+        lines = result.splitlines()
+        keyboards = []
+        for line in lines:
+            if any(key in line.lower() for key in ["keyboard", "hid"]):
+                keyboards.append(line.strip())
+        return keyboards
+    except Exception as e:
+        print(f"[Errore] ioreg fallito: {e}")
+        return []
 
-def monitor_speed():
+# === INVIA ALERT FIREBASE ===
+def invia_alert(riga_identificativa):
+    timestamp = datetime.utcnow().isoformat()
+    alert = {
+        "tipo": "hid_alert",
+        "timestamp": timestamp,
+        "dispositivo": DISPOSITIVO,
+        "descrizione": riga_identificativa
+    }
+    db.collection("alert").add(alert)
+    print(f"[🚨] HID sospetto rilevato!
+[✅] Alert inviato alle {timestamp}\n -> {riga_identificativa}")
+
+# === LOOP PRINCIPALE ===
+print("🛡️ Monitoraggio in corso (nuove tastiere USB HID)… Ctrl+C per uscire.")
+precedenti = get_current_keyboards()
+
+try:
     while True:
-        time.sleep(CHECK_INTERVAL)
-        with lock:
-            count = len(buffer)
-            buffer.clear()
-        speed = count / CHECK_INTERVAL
-        if speed > SPEED_THRESHOLD:
-            write_log(f"Typing Speed: {speed:.2f} tasti/sec", status="Sospetto")
-        else:
-            write_log(f"Typing Speed: {speed:.2f} tasti/sec", status="Normale")
+        attuali = get_current_keyboards()
+        nuovi = [k for k in attuali if k not in precedenti]
+        if nuovi:
+            for k in nuovi:
+                invia_alert(k)
+        precedenti = attuali
+        time.sleep(5)
 
-def on_press(key):
-    with lock:
-        buffer.append(key)
-
-def start_keylogger():
-    listener = pynput.keyboard.Listener(on_press=on_press)
-    listener.start()
-
-    monitor_thread = threading.Thread(target=monitor_speed, daemon=True)
-    monitor_thread.start()
-
-    listener.join()
-
-if __name__ == "__main__":
-    start_keylogger()
+except KeyboardInterrupt:
+    print("🛑 Monitoraggio interrotto.")
