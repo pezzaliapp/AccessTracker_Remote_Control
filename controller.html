@@ -90,6 +90,7 @@
     <a href="accessi_dashboard_completo.html">📋 Log Accessi</a>
     <a href="accessi_grafici_completo.html">📊 Statistiche</a>
     <a href="tracker.html">📍 Tracker</a>
+    <a href="alert.html">🚨 Alert</a>
     <a href="index.html">🏠 Home</a>
   </div>
 
@@ -107,11 +108,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  <!-- tuo controller.js -->
+  <!-- controller logic -->
   <script src="controller.js" defer></script>
 
   <script>
-    // tema scuro/chiaro
     const htmlTag = document.documentElement;
     const saved = localStorage.getItem('theme');
     const darkQ = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -125,7 +125,6 @@
         apply(htmlTag.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
       });
 
-    // service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js').catch(console.error);
     }
